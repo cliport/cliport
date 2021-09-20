@@ -1,0 +1,33 @@
+# Data Generation
+
+defaults:
+  - config
+
+hydra:
+  run:
+    dir: ${root_dir}
+
+data_dir: ${root_dir}/data  # where to store dataset
+assets_root: ${root_dir}/cliport/environments/assets/
+disp: False  # visualize PyBullet
+shared_memory: False
+task: packing-boxes-pairs-seen-colors
+mode: train # 'train' or 'val' or 'test'
+n: 1000 # number of demos to generate
+save_data: True  # write episodes to disk
+
+dataset:
+  type: 'single' # 'single' or 'multi'
+  images: True
+  cache: True # load episodes to memory instead of reading from disk
+  augment:
+    theta_sigma: 60 # rotation sigma in degrees; N(mu = 0, sigma = theta_sigma).
+
+# record videos (super slow)
+record:
+  save_video: False
+  save_video_path: ${data_dir}/${task}-${mode}/videos/
+  add_text: False
+  fps: 20
+  video_height: 640
+  video_width: 720

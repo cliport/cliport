@@ -1,0 +1,6 @@
+# Ignore everything
+**
+
+# Except scripts
+!/scripts
+!/requirements.txt
