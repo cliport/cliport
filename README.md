@@ -72,7 +72,7 @@ $ python cliport/eval.py model_task=multi-language-conditioned \
                          disp=True
 ```
 
-You can also evaluate the same `multi-language-conditioned` model on different tasks. Following the example above, generate a `test` dataset and then specify `eval_task=<task_name>` with `checkpoint_type=val_missing` (because the quickstart doesn't include validation results for all tasks).
+You can also evaluate the same `multi-language-conditioned` model on different tasks. Similar to the example above, generate a `val` dataset and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (because the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)).
 
 ## Download
 
