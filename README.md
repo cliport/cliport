@@ -72,9 +72,9 @@ $ python cliport/eval.py model_task=multi-language-conditioned \
                          disp=True
 ```
 
-You can also evaluate the same `multi-language-conditioned` model on different tasks. Similar to the example above, generate a `val` set and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (because the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)).
+You can evaluate the same `multi-language-conditioned` model on different tasks. Similar to the example above, generate a `val` set and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (because the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)).
 
-## Download
+## Pre-trained Agents and Google Objects
 
 Download pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and Google Scanned Objects:
 
@@ -83,6 +83,21 @@ $ sh scripts/full_download.sh
 ```
 
 **Note:** Google Drive might complain about bandwidth restrictions. I'd recommend using [rclone](https://rclone.org/drive/) with API access enabled. 
+
+Evaluate the best validation checkpoint on the test set:
+```bash
+$ python cliport/eval.py model_task=multi-language-conditioned \
+                         eval_task=stack-block-pyramid-seq-seen-colors \ 
+                         agent=cliport \ 
+                         n_demos=10 \ 
+                         train_demos=100 \ 
+                         exp_folder=cliport_exps \ 
+                         mode=test \ 
+                         checkpoint_type=test_best \ 
+                         update_results=True \
+                         disp=True
+```
+
 
 ## Training and Evaluation
 
