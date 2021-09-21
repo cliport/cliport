@@ -25,19 +25,19 @@ class RN50BertUNet(RN50BertLingUNet):
 
         self.up3 = Up(512, 256 // self.up_factor, self.bilinear)
 
-        self.dec1 = nn.Sequential(
+        self.layer1 = nn.Sequential(
             ConvBlock(128, [64, 64, 64], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             IdentityBlock(64, [64, 64, 64], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             nn.UpsamplingBilinear2d(scale_factor=2),
         )
 
-        self.dec2 = nn.Sequential(
+        self.layer2 = nn.Sequential(
             ConvBlock(64, [32, 32, 32], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             IdentityBlock(32, [32, 32, 32], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             nn.UpsamplingBilinear2d(scale_factor=2),
         )
 
-        self.dec3 = nn.Sequential(
+        self.layer3 = nn.Sequential(
             ConvBlock(32, [16, 16, 16], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             IdentityBlock(16, [16, 16, 16], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             nn.UpsamplingBilinear2d(scale_factor=2),
@@ -62,7 +62,7 @@ class RN50BertUNet(RN50BertLingUNet):
         x = self.up2(x, im[-3])
         x = self.up3(x, im[-4])
 
-        for layer in [self.dec1, self.dec2, self.dec3, self.conv2]:
+        for layer in [self.layer1, self.layer2, self.layer3, self.conv2]:
             x = layer(x)
 
         x = F.interpolate(x, size=(in_shape[-2], in_shape[-1]), mode='bilinear')

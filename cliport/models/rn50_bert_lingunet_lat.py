@@ -70,21 +70,21 @@ class RN50BertLingUNetLat(nn.Module):
         self.up3 = Up(512, 256 // self.up_factor, self.bilinear)
         self.lat_fusion3 = FusionConvLat(input_dim=256+128, output_dim=128)
 
-        self.dec1 =  nn.Sequential(
+        self.layer1 =  nn.Sequential(
             ConvBlock(128, [64, 64, 64], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             IdentityBlock(64, [64, 64, 64], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             nn.UpsamplingBilinear2d(scale_factor=2),
         )
         self.lat_fusion4 = FusionConvLat(input_dim=128+64, output_dim=64)
 
-        self.dec2 = nn.Sequential(
+        self.layer2 = nn.Sequential(
             ConvBlock(64, [32, 32, 32], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             IdentityBlock(32, [32, 32, 32], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             nn.UpsamplingBilinear2d(scale_factor=2),
         )
         self.lat_fusion5 = FusionConvLat(input_dim=64+32, output_dim=32)
 
-        self.dec3 = nn.Sequential(
+        self.layer3 = nn.Sequential(
             ConvBlock(32, [16, 16, 16], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             IdentityBlock(16, [16, 16, 16], kernel_size=3, stride=1, batchnorm=self.batchnorm),
             nn.UpsamplingBilinear2d(scale_factor=2),
@@ -145,13 +145,13 @@ class RN50BertLingUNetLat(nn.Module):
         x = self.up3(x, im[-4])
         x = self.lat_fusion3(x, lat[-4])
 
-        x = self.dec1(x)
+        x = self.layer1(x)
         x = self.lat_fusion4(x, lat[-3])
 
-        x = self.dec2(x)
+        x = self.layer2(x)
         x = self.lat_fusion5(x, lat[-2])
 
-        x = self.dec3(x)
+        x = self.layer3(x)
         x = self.lat_fusion6(x, lat[-1])
 
         x = self.conv2(x)
