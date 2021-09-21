@@ -29,7 +29,7 @@ type: single # 'single' or 'multi'
 # paths
 model_dir: ${root_dir}
 exp_folder: exps
-data_dir: ${root_dir}/lang_data
+data_dir: ${root_dir}/data
 assets_root: ${root_dir}/cliport/environments/assets/
 
 model_path: ${model_dir}/${exp_folder}/${model_task}-${agent}-n${train_demos}-train/checkpoints/ # path to pre-trained models
