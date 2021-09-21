@@ -2,7 +2,7 @@
 
 ## Descriptions
 
-8 goal-conditioned tasks contain two splits: **seen** and **unseen**. The **full** version is a union of both **seen** and **unseen** attributes made specifically for multi-attr training. Sequential tasks that involve following instructions in a specific order are indicated by **seq** in their names.
+This folder contains a total of 10 goal-conditioned (language or image) and 8 demo-conditioned (original TransporterNets) tasks. 8 out of the 10 goal-conditioned tasks contain two splits: **seen** and **unseen**. The **full** version is a union of both **seen** and **unseen** attributes made specifically for multi-attr training. Sequential tasks that involve following instructions in a specific order are indicated by **seq** in their names.
 
 See [__init__.py](__init__.py) for the full list of demo-conditioned and goal-conditioned (language or image) tasks:
 
