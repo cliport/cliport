@@ -49,7 +49,7 @@ Download a pre-trained checkpoint for `multi-language-conditioned` trained with 
 $ sh scripts/quickstart_download.sh
 ```
 
-Generate 10 `test` instances for `stack-block-pyramid-seq-seen-colors` and save them in `$CLIPORT_ROOT/data`:
+Generate a small `test` set of 10 instances for `stack-block-pyramid-seq-seen-colors` and save them in `$CLIPORT_ROOT/data`:
 ```bash
 $ python cliport/demos.py n=10 \  
                           task=stack-block-pyramid-seq-seen-colors \ 
@@ -58,7 +58,7 @@ $ python cliport/demos.py n=10 \
 ```   
 This will take a few minutes to finish. If you are on a headless machine turn off the visualization with `disp=False`. 
 
-Evaluate the best validation checkpoint (trained with 1000 demos) on the test set:
+Evaluate the best validation checkpoint on the test set:
 ```bash
 $ python cliport/eval.py model_task=multi-language-conditioned \
                          eval_task=stack-block-pyramid-seq-seen-colors \ 
@@ -72,6 +72,8 @@ $ python cliport/eval.py model_task=multi-language-conditioned \
                          disp=True
 ```
 
+You can also evaluate the same `multi-language-conditioned` model on different tasks. Following the example above, generate a `test` dataset and then specify `eval_task=<task_name>` with `checkpoint_type=val_missing` (because the quickstart doesn't include validation results for all tasks).
+
 ## Training and Evaluation
 
 All tasks follow a 4-phase workflow:
@@ -80,6 +82,16 @@ All tasks follow a 4-phase workflow:
 2. Train agents with `train.py` 
 3. Run validation with `eval.py` to find the best checkpoint on `val` tasks
 4. Evaluate the best checkpoint on `test` tasks with `eval.py`  
+
+### Download 
+
+Download pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and Google Scanned Objects:
+
+```bash
+$ sh scripts/full_download.sh
+```
+
+**Note:** Google Drive might complain about bandwidth restrictions. I'd recommend using [rclone](https://rclone.org/drive/) with API access enabled. 
 
 ### Dataset Generation
 
