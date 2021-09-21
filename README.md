@@ -12,7 +12,7 @@ For the latest updates, see: [cliport.github.io](https://cliport.github.io)
 
 ## Guides
 
-- Getting Started: [Installation](#installation), [Quick Tutorial](#quickstart)
+- Getting Started: [Installation](#installation), [Quick Tutorial](#quickstart), [Download Checkpoints & Objects](#download)
 - Data Generation: [Dataset](#dataset-generation), [Tasks](cliport/tasks)
 - Training & Evaluation: [Single Task](#single-task-training--evaluation), [Multi Task](#multi-task-training--evaluation)
 - Miscellaneous: [Notebooks](#notebooks), [Docker Guide](#docker-guide), [Disclaimers](#disclaimers), [Real-Robot Training FAQ](#real-robot-training-faq)
@@ -74,7 +74,7 @@ $ python cliport/eval.py model_task=multi-language-conditioned \
 
 You can evaluate the same `multi-language-conditioned` model on different tasks. Similar to the example above, generate a `val` set and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (because the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)).
 
-## Pre-trained Agents and Google Objects
+## Download
 
 Download pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and Google Scanned Objects:
 
