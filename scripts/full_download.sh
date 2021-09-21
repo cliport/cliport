@@ -1,9 +1,7 @@
 #!/bin/bash
 
 # Download Google Scanned Objects
-wget https://pbss.s8k.io/v1/AUTH_cliport/cliport/google.zip
+wget --no-check-certificate -r 'https://drive.google.com/uc?export=download&id=1xMB0jKKfpigsHlwr72Kq9plNJRjMkl_g' -O google.zip
 unzip google.zip
-#mv google cliport/environments/assets/
-#rm google.zip
-
-# Dow
+mv google cliport/environments/assets
+rm google.zip

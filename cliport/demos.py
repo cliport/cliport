@@ -75,7 +75,7 @@ def main(cfg):
         info = env.info
         reward = 0
 
-        # Unlikely, but a safety check anyway to prevent leaks.
+        # Unlikely, but a safety check to prevent leaks.
         if task.mode == 'val' and seed > (-1 + 10000):
             raise Exception("!!! Seeds for val set will overlap with the test set !!!")
 

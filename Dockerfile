@@ -42,6 +42,6 @@ RUN apt-get update && apt-get install -y \
 
 # change ownership of everything to our user
 RUN mkdir /home/$USER_NAME/cliport
-RUN cd ${USER_HOME_DIR} && echo $(pwd) && chown $USER_NAME:$USER_NAME -R .
+RUN cd /home/$USER_NAME/cliport && echo $(pwd) && chown $USER_NAME:$USER_NAME -R .
 
-ENTRYPOINT bash -c "export CLIPORT_ROOT=~/cliport && /bin/bash && source ~/cliport_env/bin/activate"
+ENTRYPOINT bash -c "/bin/bash && source ~/cliport_env/bin/activate && export CLIPORT_ROOT=~/cliport && PYTHONPATH=~/cliport:$PYTHONPATH"

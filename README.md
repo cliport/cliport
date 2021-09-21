@@ -46,7 +46,7 @@ A quick tutorial on evaluating a pre-trained multi-task model.
 
 Download a pre-trained checkpoint for `multi-language-conditioned` trained with 1000 demos:
 ```bash
-sh scripts/quickstart_download.sh
+$ sh scripts/quickstart_download.sh
 ```
 
 Generate 10 `test` instances for `stack-block-pyramid-seq-seen-colors` and save them in `$CLIPORT_ROOT/data`:
@@ -67,7 +67,8 @@ $ python cliport/eval.py model_task=multi-language-conditioned \
                          train_demos=1000 \ 
                          exp_folder=cliport_quickstart \ 
                          mode=test \ 
-                         checkpoint_type=test_best \
+                         checkpoint_type=test_best \ 
+                         update_results=True \
                          disp=True
 ```
 
