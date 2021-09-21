@@ -74,16 +74,7 @@ $ python cliport/eval.py model_task=multi-language-conditioned \
 
 You can also evaluate the same `multi-language-conditioned` model on different tasks. Following the example above, generate a `test` dataset and then specify `eval_task=<task_name>` with `checkpoint_type=val_missing` (because the quickstart doesn't include validation results for all tasks).
 
-## Training and Evaluation
-
-All tasks follow a 4-phase workflow:
- 
-1. Generate `train`, `val`, `test` datasets with `demos.py` 
-2. Train agents with `train.py` 
-3. Run validation with `eval.py` to find the best checkpoint on `val` tasks
-4. Evaluate the best checkpoint on `test` tasks with `eval.py`  
-
-### Download 
+## Download
 
 Download pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and Google Scanned Objects:
 
@@ -92,6 +83,15 @@ $ sh scripts/full_download.sh
 ```
 
 **Note:** Google Drive might complain about bandwidth restrictions. I'd recommend using [rclone](https://rclone.org/drive/) with API access enabled. 
+
+## Training and Evaluation
+
+The following is a guide for training everything from scratch. All tasks follow a 4-phase workflow:
+ 
+1. Generate `train`, `val`, `test` datasets with `demos.py` 
+2. Train agents with `train.py` 
+3. Run validation with `eval.py` to find the best checkpoint on `val` tasks
+4. Evaluate the best checkpoint on `test` tasks with `eval.py`
 
 ### Dataset Generation
 
