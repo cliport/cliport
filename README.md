@@ -306,7 +306,7 @@ This work use code from the following open-source projects and datasets:
 #### Google Ravens (TransporterNets)
 Original:  [https://github.com/google-research/ravens](https://github.com/google-research/ravens)  
 License: [Apache 2.0](https://github.com/google-research/ravens/blob/master/LICENSE)    
-Changes: All PyBullet tasks are directly adapted from the Ravens codebase. 
+Changes: All PyBullet tasks are directly adapted from the Ravens codebase. The original TransporterNets models were reimplemented in PyTorch.
 
 #### OpenAI CLIP
 
