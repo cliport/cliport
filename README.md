@@ -198,7 +198,7 @@ $ python cliport/train.py train.task=multi-language-conditioned \
 
 #### Validation
 
-Run validation with a trained `multi-language-conditioned` multi-task model on `stack-block-pyramid-seq-seen-colors` tasks
+Run validation with a trained `multi-language-conditioned` multi-task model on `stack-block-pyramid-seq-seen-colors`:
 
 ```bash
 python cliport/test.py model_task=multi-language-conditioned \ 
