@@ -99,7 +99,7 @@ $ python cliport/eval.py model_task=multi-language-conditioned \
                          disp=True
 ```
 
-**Note:** Google Drive might complain about bandwidth restrictions. I'd recommend using [rclone](https://rclone.org/drive/) with API access enabled. 
+**Note:** Google Drive might complain about bandwidth restrictions. I recommend using [rclone](https://rclone.org/drive/) with API access enabled. 
 
 ## Training and Evaluation
 
