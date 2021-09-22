@@ -267,6 +267,7 @@ Start container:
 $ python scripts/docker_run.py --nvidia_docker
  
   cd ~/cliport
+  source ~/cliport_env/bin/activate
   python setup.py develop
   export PYTHONPATH=$(pwd)
 ```
