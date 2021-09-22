@@ -51,9 +51,9 @@ $ python scripts/quickstart_download.py
 
 Generate a small `test` set of 10 instances for `stack-block-pyramid-seq-seen-colors` and save them in `$CLIPORT_ROOT/data`:
 ```bash
-$ python cliport/demos.py n=10 \  
-                          task=stack-block-pyramid-seq-seen-colors \ 
-                          mode=test \ 
+$ python cliport/demos.py n=10 \
+                          task=stack-block-pyramid-seq-seen-colors \
+                          mode=test \
                           disp=True 
 ```   
 This will take a few minutes to finish. If you are on a headless machine turn off the visualization with `disp=False`. 
@@ -61,13 +61,13 @@ This will take a few minutes to finish. If you are on a headless machine turn of
 Evaluate the best validation checkpoint on the test set:
 ```bash
 $ python cliport/eval.py model_task=multi-language-conditioned \
-                         eval_task=stack-block-pyramid-seq-seen-colors \ 
-                         agent=cliport \ 
-                         n_demos=10 \ 
-                         train_demos=1000 \ 
-                         exp_folder=cliport_quickstart \ 
-                         mode=test \ 
-                         checkpoint_type=test_best \ 
+                         eval_task=stack-block-pyramid-seq-seen-colors \
+                         agent=cliport \
+                         n_demos=10 \
+                         train_demos=1000 \
+                         exp_folder=cliport_quickstart \
+                         mode=test \
+                         checkpoint_type=test_best \
                          update_results=True \
                          disp=True
 ```
@@ -90,13 +90,13 @@ This [Google Drive Folder](https://drive.google.com/drive/folders/1BLczZJcVFbaP_
 Evaluate the best validation checkpoint on the test set:
 ```bash
 $ python cliport/eval.py model_task=multi-language-conditioned \
-                         eval_task=stack-block-pyramid-seq-seen-colors \ 
-                         agent=cliport \ 
-                         n_demos=10 \ 
-                         train_demos=100 \ 
-                         exp_folder=cliport_exps \ 
-                         mode=test \ 
-                         checkpoint_type=test_best \ 
+                         eval_task=stack-block-pyramid-seq-seen-colors \
+                         agent=cliport \
+                         n_demos=10 \
+                         train_demos=100 \
+                         exp_folder=cliport_exps \
+                         mode=test \
+                         checkpoint_type=test_best \
                          update_results=True \
                          disp=True
 ```
