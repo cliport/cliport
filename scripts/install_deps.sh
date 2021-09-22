@@ -32,6 +32,7 @@ DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends \
   ffmpeg \
   nvidia-settings \
   libffi-dev \
+  libfreetype6-dev \
   libgl1-mesa-dev \
   flex \
   bison \
