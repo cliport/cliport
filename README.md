@@ -116,9 +116,9 @@ The following is a guide for training everything from scratch. All tasks follow 
 
 Generate a`train` set of 1000 demonstrations for `stack-block-pyramid-seq-seen-colors` as save them in `$CLIPORT_ROOT/data`:
 ```bash
-$ python cliport/demos.py n=1000 \ 
-                          task=stack-block-pyramid-seq-seen-colors \ 
-                          mode=train 
+python cliport/demos.py n=1000 \
+                        task=stack-block-pyramid-seq-seen-colors \
+                        mode=train 
 ```
 
 You can also do a sequential sweep with `-m` and comma-separated params `task=towers-of-hanoi-seq-seen-colors,stack-block-pyramid-seq-seen-colors`. Use `disp=True` to visualize the data generation.  
@@ -130,7 +130,7 @@ You can also do a sequential sweep with `-m` and comma-separated params `task=to
 Run [`generate_dataset.sh`](scripts/generate_datasets.sh) to generate the full dataset and save it to `$CLIPORT_ROOT/data`:
 
 ```bash
-$ sh scripts/generate_dataset.sh data
+sh scripts/generate_dataset.sh data
 ```
 **Note:** This script is not parallelized and will take a long time (maybe days) to finish. 
 
@@ -141,14 +141,14 @@ $ sh scripts/generate_dataset.sh data
 Train a `cliport` agent with `1000` demonstrations on the `stack-block-pyramid-seq-seen-colors` task for 200K iterations:
 
 ```bash
-$ python cliport/train.py train.task=stack-block-pyramid-seq-seen-colors \
-                          train.agent=cliport \
-                          train.attn_stream_fusion_type=add \
-                          train.trans_stream_fusion_type=conv \
-                          train.lang_fusion_type=mult \
-                          train.n_demos=1000 \
-                          train.n_step=201000 \
-                          dataset.cache=False 
+python cliport/train.py train.task=stack-block-pyramid-seq-seen-colors \
+                        train.agent=cliport \
+                        train.attn_stream_fusion_type=add \
+                        train.trans_stream_fusion_type=conv \
+                        train.lang_fusion_type=mult \
+                        train.n_demos=1000 \
+                        train.n_step=201000 \
+                        dataset.cache=False 
 ```
 
 #### Validation
@@ -184,14 +184,14 @@ python cliport/test.py eval_task=stack-block-pyramid-seq-seen-colors \
 Train multi-task models by specifying `task=multi-language-conditioned`, `task=multi-loo-packing-box-pairs-unseen-colors` (`loo` stands for leave-one-out or multi-attr tasks) etc.
 
 ```bash
-$ python cliport/train.py train.task=multi-language-conditioned \
-                          train.agent=cliport \
-                          train.attn_stream_fusion_type=add \
-                          train.trans_stream_fusion_type=conv \
-                          train.lang_fusion_type=mult \
-                          train.n_demos=1000 \
-                          dataset.cache=False \ 
-                          dataset.type=multi 
+python cliport/train.py train.task=multi-language-conditioned \
+                        train.agent=cliport \
+                        train.attn_stream_fusion_type=add \
+                        train.trans_stream_fusion_type=conv \
+                        train.lang_fusion_type=mult \
+                        train.n_demos=1000 \
+                        dataset.cache=False \
+                        dataset.type=multi 
 ```
 
 **Important**: You need to generate the full dataset of tasks specified in [`dataset.py`](cliport/dataset.py) before multi-task training or modify the list of tasks [here](cliport/dataset.py#L405). 
@@ -201,7 +201,7 @@ $ python cliport/train.py train.task=multi-language-conditioned \
 Run validation with a trained `multi-language-conditioned` multi-task model on `stack-block-pyramid-seq-seen-colors`:
 
 ```bash
-python cliport/test.py model_task=multi-language-conditioned \ 
+python cliport/test.py model_task=multi-language-conditioned \
                        eval_task=stack-block-pyramid-seq-seen-colors \
                        agent=cliport \
                        n_demos=100 \
@@ -216,7 +216,7 @@ python cliport/test.py model_task=multi-language-conditioned \
 Evaluate the best checkpoint on the `test` set:
 
 ```bash
-python cliport/test.py model_task=multi-language-conditioned \ 
+python cliport/test.py model_task=multi-language-conditioned \
                        eval_task=stack-block-pyramid-seq-seen-colors \
                        agent=cliport \
                        n_demos=100 \
@@ -256,7 +256,7 @@ Modify [docker_build.py](scripts/docker_build.py) and [docker_run.py](scripts/do
 Build the image:
 
 ```bash
-$ python scripts/docker_build.py 
+python scripts/docker_build.py 
 ```
 
 #### Run
@@ -264,7 +264,7 @@ $ python scripts/docker_build.py
 Start container:
 
 ```bash
-$ python scripts/docker_run.py --nvidia_docker
+python scripts/docker_run.py --nvidia_docker
  
   cd ~/cliport
   source ~/cliport_env/bin/activate
