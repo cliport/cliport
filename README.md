@@ -267,6 +267,8 @@ Start container:
 $ python scripts/docker_run.py --nvidia_docker
  
   cd ~/cliport
+  python setup.py develop
+  export PYTHONPATH=$(pwd)
 ```
 
 Use `scripts/docker_run.py --headless` if you are on a headless machines like a remote server or cloud instance.
