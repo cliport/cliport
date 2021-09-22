@@ -46,7 +46,7 @@ A quick tutorial on evaluating a pre-trained multi-task model.
 
 Download a pre-trained checkpoint for `multi-language-conditioned` trained with 1000 demos:
 ```bash
-$ sh scripts/quickstart_download.sh
+$ python scripts/quickstart_download.py
 ```
 
 Generate a small `test` set of 10 instances for `stack-block-pyramid-seq-seen-colors` and save them in `$CLIPORT_ROOT/data`:
@@ -76,11 +76,14 @@ You can evaluate the same `multi-language-conditioned` model on other tasks. Fir
 
 ## Download
 
-Download pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and Google Scanned Objects:
+### Google Scanned Objects
 
 ```bash
-$ sh scripts/full_download.sh
+$ python scripts/google_objects_download.py
 ```
+
+### Pre-trained Checkpoints and Result JSONs
+This [Google Drive Folder](https://drive.google.com/drive/folders/1BLczZJcVFbaP_sjQ9_sLvUwyLDcq7T5R?usp=sharing) contains pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and validation/test result jsons for all tasks. 
 
 **Note:** Google Drive might complain about bandwidth restrictions. I'd recommend using [rclone](https://rclone.org/drive/) with API access enabled. 
 
@@ -105,8 +108,8 @@ The following is a guide for training everything from scratch. All tasks follow 
  
 1. Generate `train`, `val`, `test` datasets with `demos.py` 
 2. Train agents with `train.py` 
-3. Run validation with `eval.py` to find the best checkpoint on `val` tasks
-4. Evaluate the best checkpoint on `test` tasks with `eval.py`
+3. Run validation with `eval.py` to find the best checkpoint on `val` tasks and save `*val-results.json`
+4. Evaluate the best checkpoint in `*val-results.json` on `test` tasks with `eval.py`
 
 ### Dataset Generation
 
