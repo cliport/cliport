@@ -29,11 +29,11 @@ Setup virtualenv and install requirements:
 ```bash
 $ virtualenv -p $(which python3.8) --system-site-packages cliport_env # or whichever package manager you prefer 
 $ source cliport_env/bin/activate
-
 $ pip install --upgrade pip
-$ pip install -r requirements.txt
 
 $ cd cliport
+$ pip install -r requirements.txt
+
 $ export CLIPORT_ROOT=$(pwd) 
 $ python setup.py develop
 ```
@@ -329,7 +329,7 @@ Changes: Used as is in [unet.py](cliport/models/core/unet.py). Note: This part o
 ## Citations
 
 **CLIPort**
-```
+```bibtex
 @inproceedings{shridhar2021cliport,
   author    = {Shridhar, Mohit and Manuelli, Lucas and Fox, Dieter},
   title     = {CLIPort: What and Where Pathways for Robotic Manipulation},
@@ -339,7 +339,7 @@ Changes: Used as is in [unet.py](cliport/models/core/unet.py). Note: This part o
 ```
 
 **CLIP**
-```
+```bibtex
 @article{radford2021learning,
   title={Learning transferable visual models from natural language supervision},
   author={Radford, Alec and Kim, Jong Wook and Hallacy, Chris and Ramesh, Aditya and Goh, Gabriel and Agarwal, Sandhini and Sastry, Girish and Askell, Amanda and Mishkin, Pamela and Clark, Jack and others},
@@ -349,7 +349,7 @@ Changes: Used as is in [unet.py](cliport/models/core/unet.py). Note: This part o
 ```
 
 **TransporterNets**
-```
+```bibtex
 @inproceedings{zeng2020transporter,
   title={Transporter networks: Rearranging the visual world for robotic manipulation},
   author={Zeng, Andy and Florence, Pete and Tompson, Jonathan and Welker, Stefan and Chien, Jonathan and Attarian, Maria and Armstrong, Travis and Krasin, Ivan and Duong, Dan and Sindhwani, Vikas and others},
