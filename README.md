@@ -264,7 +264,6 @@ Start container:
 ```bash
 $ python scripts/docker_run.py --nvidia_docker
  
-  source ~/cliport_env/bin/activate
   cd ~/cliport
 ```
 
