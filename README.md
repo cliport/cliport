@@ -85,6 +85,8 @@ $ python scripts/google_objects_download.py
 ### Pre-trained Checkpoints and Result JSONs
 This [Google Drive Folder](https://drive.google.com/drive/folders/1BLczZJcVFbaP_sjQ9_sLvUwyLDcq7T5R?usp=sharing) contains pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and validation/test result JSONs for all tasks. The `*val-results.json` files contain the name of the best checkpoint (from validation) to be evaluated on the `test` set.
 
+**Note:** Google Drive might complain about bandwidth restrictions. I recommend using [rclone](https://rclone.org/drive/) with API access enabled.
+
 Evaluate the best validation checkpoint on the test set:
 ```bash
 $ python cliport/eval.py model_task=multi-language-conditioned \
@@ -98,8 +100,6 @@ $ python cliport/eval.py model_task=multi-language-conditioned \
                          update_results=True \
                          disp=True
 ```
-
-**Note:** Google Drive might complain about bandwidth restrictions. I recommend using [rclone](https://rclone.org/drive/) with API access enabled. 
 
 ## Training and Evaluation
 
