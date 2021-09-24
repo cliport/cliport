@@ -294,7 +294,7 @@ CLIPort does not predict height values. You can either: (1) come up with a heuri
 
 #### Shouldn't CLIP help in zero-shot detection of things? Why do I need collect more data?
 
-Note that CLIPort is not doing "object detection". CLIPort fine-tunes CLIP's representations to "detect actions" in SE(2). CLIP by itself has no understanding of actions or affordances; recognizing and localizing objects (e.g. detecting hammer) does not tell you anything about how to manipulate them (e.g. grasping hammer by the handle).    
+Note that CLIPort is not doing "object detection". CLIPort fine-tunes CLIP's representations to "detect actions" in SE(2). CLIP by itself has no understanding of actions or affordances; recognizing and localizing objects (e.g. detecting hammer) does not tell you anything about how to manipulate them (e.g. grasping the hammer by the handle).    
 
 #### What are the best hyperparams for real-robot training?
 
