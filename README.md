@@ -240,7 +240,7 @@ python cliport/test.py model_task=multi-language-conditioned \
 - **Memory and Storage**: There are lots of places where memory usage can be reduced. You don't need 3 copies of the same CLIP ResNet50 and you don't need to save its weights in checkpoints since it's frozen anyway. Dataset sizes could be dramatically reduced with better storage formats and compression. 
 - **Frameworks**: There are lots of leftover NumPy bits from when I was trying to reproduce the TransportNets results. I'll try to clean up when I get some time. 
 - **Rotation Augmentation**: All tasks use the same distrubution for sampling SE(2) rotation perturbations. This obviously leads to issues with tasks that involve spatial relationships like 'left' or 'forward'.  
-- **Evaluation Runs**: In an ideal setting, the evaluation metrics should be averaged over 3 or more repetitions with different seeds. But there were so many experiments in Table 1 that I ran out of resources to do so. This sort of averaging might be feasible if you are working just with multi-task models. 
+- **Evaluation Runs**: In an ideal setting, the evaluation metrics should be averaged over 3 or more repetitions with different seeds. This might be feasible if you are working just with multi-task models. 
 - **Other Limitations**: Checkout Appendix I in the paper.
 
 ## Notebooks
