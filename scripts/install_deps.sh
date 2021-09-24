@@ -44,4 +44,7 @@ DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends \
   pciutils \
   xserver-xorg \
   xserver-xorg-video-fbdev \
-  xauth
+  xauth \
+  python3-pip \
+  python3-ipdb \
+  python3-tk 

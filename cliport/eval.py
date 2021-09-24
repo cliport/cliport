@@ -129,9 +129,10 @@ def main(vcfg):
 
                 for _ in range(task.max_steps):
                     act = agent.act(obs, info, goal)
+                    lang_goal = info['lang_goal']
                     obs, reward, done, info = env.step(act)
                     total_reward += reward
-                    print(f'Total Reward: {total_reward} Done: {done}')
+                    print(f'Total Reward: {total_reward:.3f} | Done: {done} | Goal: {lang_goal}')
                     if done:
                         break
 

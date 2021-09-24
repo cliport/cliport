@@ -54,3 +54,7 @@ See [__init__.py](__init__.py) for the full list of demo-conditioned and goal-co
 ## Adding New Tasks
 
 See [put_block_in_bowl.py](put_block_in_bowl.py) for an example on how a task is specified. Creating a new task involves: (1) setting up a scene with the desired objects, (2) specifying goals with a language instruction and target "zones" or "poses", (3) defining an evaluation metric that is either sequential or non-sequential. See the original [Ravens codebase](https://github.com/google-research/ravens) for more details on task specification and organization.
+
+## Credit
+
+All demo-conditioned are from [Ravens](https://github.com/google-research/ravens). The language-conditioned tasks were built-off the same PyBullet environments.

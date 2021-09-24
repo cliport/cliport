@@ -29,8 +29,8 @@ def main(cfg):
     agent = task.oracle(env)
     data_path = os.path.join(cfg['data_dir'], "{}-{}".format(cfg['task'], task.mode))
     dataset = RavensDataset(data_path, cfg, n_demos=0, augment=False)
-    print(f"Saving to: {data_path}", flush=True)
-    print(f"Mode: {task.mode}", flush=True)
+    print(f"Saving to: {data_path}")
+    print(f"Mode: {task.mode}")
 
     # Train seeds are even and val/test seeds are odd. Test seeds are offset by 10000
     seed = dataset.max_seed
@@ -53,7 +53,7 @@ def main(cfg):
         np.random.seed(seed)
         random.seed(seed)
 
-        print('Oracle demo: {}/{} | Seed: {}'.format(dataset.n_episodes + 1, cfg['n'], seed), flush=True)
+        print('Oracle demo: {}/{} | Seed: {}'.format(dataset.n_episodes + 1, cfg['n'], seed))
 
         env.set_task(task)
         obs = env.reset()
@@ -72,9 +72,10 @@ def main(cfg):
         for _ in range(task.max_steps):
             act = agent.act(obs, info)
             episode.append((obs, act, reward, info))
+            lang_goal = info['lang_goal']
             obs, reward, done, info = env.step(act)
             total_reward += reward
-            print(f'Total Reward: {total_reward} Done: {done}', flush=True)
+            print(f'Total Reward: {total_reward:.3f} | Done: {done} | Goal: {lang_goal}')
             if done:
                 break
         episode.append((obs, None, reward, info))

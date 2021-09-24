@@ -1,5 +1,4 @@
-FROM nvidia/cuda:9.2-cudnn7-devel-ubuntu16.04
-#FROM nvidia/cuda:11.2.0-cudnn8-devel-ubuntu16.04
+FROM nvidia/cudagl:11.1.1-devel-ubuntu18.04
 
 ARG USER_NAME
 ARG USER_PASSWORD
@@ -25,23 +24,52 @@ RUN yes "Y" | /tmp/install_deps.sh
 
 # setup python environment
 RUN cd $WORKDIR
-ENV VIRTUAL_ENV=/home/$USER_NAME/cliport_env
-RUN python3.8 -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # install python requirements
-RUN pip install --upgrade pip
-RUN pip install -U setuptools
-COPY ./requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt -f https://download.pytorch.org/whl/torch_stable.html
+# RUN sudo python3 -m pip install --upgrade pip && \ 
+#     sudo python3 -m pip install --upgrade
+
+# install pip3
+RUN apt-get -y install python3-pip
+RUN sudo python3 -m pip install --upgrade pip
+
+# install pytorch
+RUN sudo pip3 install \
+   torch==1.9.1+cu111 \
+   torchvision==0.10.1+cu111 \
+   -f https://download.pytorch.org/whl/torch_stable.html
 
 # install GLX-Gears (for debugging)
 RUN apt-get update && apt-get install -y \
-   mesa-utils && \
-   rm -rf /var/lib/apt/lists/*
+   mesa-utils \
+   python3-setuptools \
+   && rm -rf /var/lib/apt/lists/*
+
+
+RUN sudo pip3 install \
+   absl-py>=0.7.0  \
+   gym==0.17.3 \
+   pybullet>=3.0.4 \
+   matplotlib>=3.1.1 \
+   opencv-python>=4.1.2.30 \
+   meshcat>=0.0.18 \
+   scipy==1.4.1 \
+   scikit-image==0.17.2 \
+   transforms3d==0.3.1 \
+   pytorch_lightning==1.0.3 \
+   tdqm \
+   hydra-core==1.0.5 \
+   wandb \
+   transformers==4.3.2 \
+   kornia \
+   ftfy \
+   regex \
+   ffmpeg \
+   imageio-ffmpeg
+
 
 # change ownership of everything to our user
 RUN mkdir /home/$USER_NAME/cliport
 RUN cd /home/$USER_NAME/cliport && echo $(pwd) && chown $USER_NAME:$USER_NAME -R .
-
-ENTRYPOINT bash -c "/bin/bash && source ~/cliport_env/bin/activate && export CLIPORT_ROOT=~/cliport && PYTHONPATH=~/cliport:$PYTHONPATH"
+RUN echo "export CLIPORT_ROOT=~/cliport" >> /home/$USER_NAME/.bashrc
+RUN echo "export PYTHONPATH=$PYTHONPATH:~/cliport" >> /home/$USER_NAME/.bashrc

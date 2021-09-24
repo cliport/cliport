@@ -34,7 +34,7 @@ pip install --upgrade pip
 cd cliport
 pip install -r requirements.txt
 
-export CLIPORT_ROOT=$(pwd) 
+export CLIPORT_ROOT=$(pwd)
 python setup.py develop
 ```
 
@@ -49,14 +49,13 @@ Download a pre-trained checkpoint for `multi-language-conditioned` trained with 
 python scripts/quickstart_download.py
 ```
 
-Generate a small `test` set of 10 instances for `stack-block-pyramid-seq-seen-colors` and save them in `$CLIPORT_ROOT/data`:
+Generate a small `test` set of 10 instances for `stack-block-pyramid-seq-seen-colors` inside  `$CLIPORT_ROOT/data`:
 ```bash
 python cliport/demos.py n=10 \
                         task=stack-block-pyramid-seq-seen-colors \
-                        mode=test \
-                        disp=True 
+                        mode=test 
 ```   
-This will take a few minutes to finish. If you are on a headless machine turn off the visualization with `disp=False`. 
+This will take a few minutes to finish. 
 
 Evaluate the best validation checkpoint on the test set:
 ```bash
@@ -71,6 +70,7 @@ python cliport/eval.py model_task=multi-language-conditioned \
                        update_results=True \
                        disp=True
 ```
+If you are on a headless machine turn off the visualization with `disp=False`. 
 
 You can evaluate the same `multi-language-conditioned` model on other tasks. First generate a `val` set for the task and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)).
 
@@ -78,9 +78,11 @@ You can evaluate the same `multi-language-conditioned` model on other tasks. Fir
 
 ### Google Scanned Objects
 
+Download center-of-mass (COM) corrected Google Scanned Objects:
 ```bash
 python scripts/google_objects_download.py
 ```
+Credit: [Google](#acknowledgements).
 
 ### Pre-trained Checkpoints and Result JSONs
 This [Google Drive Folder](https://drive.google.com/drive/folders/1BLczZJcVFbaP_sjQ9_sLvUwyLDcq7T5R?usp=sharing) contains pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and validation/test result JSONs for all tasks. The `*val-results.json` files contain the name of the best checkpoint (from validation) to be evaluated on the `test` set.
@@ -114,7 +116,7 @@ The following is a guide for training everything from scratch. All tasks follow 
 
 #### Single Task
 
-Generate a`train` set of 1000 demonstrations for `stack-block-pyramid-seq-seen-colors` as save them in `$CLIPORT_ROOT/data`:
+Generate a `train` set of 1000 demonstrations for `stack-block-pyramid-seq-seen-colors` inside `$CLIPORT_ROOT/data`:
 ```bash
 python cliport/demos.py n=1000 \
                         task=stack-block-pyramid-seq-seen-colors \
@@ -136,6 +138,8 @@ sh scripts/generate_dataset.sh data
 
 ### Single-Task Training & Evaluation
 
+Make sure you have a `train` and `val` set for the task you want to train on.
+
 #### Training
 
 Train a `cliport` agent with `1000` demonstrations on the `stack-block-pyramid-seq-seen-colors` task for 200K iterations:
@@ -147,7 +151,8 @@ python cliport/train.py train.task=stack-block-pyramid-seq-seen-colors \
                         train.trans_stream_fusion_type=conv \
                         train.lang_fusion_type=mult \
                         train.n_demos=1000 \
-                        train.n_step=201000 \
+                        train.n_steps=201000 \
+                        train.exp_folder=exps \
                         dataset.cache=False 
 ```
 
@@ -190,11 +195,13 @@ python cliport/train.py train.task=multi-language-conditioned \
                         train.trans_stream_fusion_type=conv \
                         train.lang_fusion_type=mult \
                         train.n_demos=1000 \
+                        train.n_steps=601000 \
                         dataset.cache=False \
+                        train.exp_folder=exps \
                         dataset.type=multi 
 ```
 
-**Important**: You need to generate the full dataset of tasks specified in [`dataset.py`](cliport/dataset.py) before multi-task training or modify the list of tasks [here](cliport/dataset.py#L405). 
+**Important**: You need to generate the full dataset of tasks specified in [`dataset.py`](cliport/dataset.py) before multi-task training or modify the list of tasks [here](cliport/dataset.py#L392). 
 
 #### Validation
 
@@ -267,9 +274,6 @@ Start container:
 python scripts/docker_run.py --nvidia_docker
  
   cd ~/cliport
-  source ~/cliport_env/bin/activate
-  python setup.py develop
-  export PYTHONPATH=$(pwd)
 ```
 
 Use `scripts/docker_run.py --headless` if you are on a headless machines like a remote server or cloud instance.
@@ -337,8 +341,8 @@ Changes: Used as is in [unet.py](cliport/models/core/unet.py). Note: This part o
 **CLIPort**
 ```bibtex
 @inproceedings{shridhar2021cliport,
-  author    = {Shridhar, Mohit and Manuelli, Lucas and Fox, Dieter},
   title     = {CLIPort: What and Where Pathways for Robotic Manipulation},
+  author    = {Shridhar, Mohit and Manuelli, Lucas and Fox, Dieter},
   booktitle = {Proceedings of the 5th Conference on Robot Learning (CoRL)},
   year      = {2021},
 }

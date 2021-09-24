@@ -41,20 +41,28 @@ if __name__=="__main__":
     image_name = args.image
     home_directory = '/home/' + user_name
 
-    cmd = "xhost +local:root \n" if not args.headless else ""
-    cmd += "docker run " if not args.nvidia_docker else "nvidia-docker run"
+    cmd = ""
+    cmd += "xhost +local:root \n" if not args.headless else ""
+    cmd += "docker run "
     if args.container:
         cmd += " --name %(container_name)s " % {'container_name': args.container}
 
     # gpus
-    if not args.nvidia_docker:
+    if args.nvidia_docker:
+        cmd += "--gpus all "
+    else:
         cmd += " --gpus %s" % (args.gpus)
 
     # display
     if args.headless:
         cmd += " -v /usr/bin/nvidia-xconfig:/usr/bin/nvidia-xconfig "
-    else:
-        cmd += " -e DISPLAY -e QT_X11_NO_MITSHM=1 -v /tmp/.X11-unix:/tmp/.X11-unix:rw "    # enable graphics
+    else: # enable graphics
+        cmd += " --env DISPLAY=unix$DISPLAY"\
+               " --env XAUTHORITY"\
+               " --env NVIDIA_DRIVER_CAPABILITIES=all"\
+               " --volume /tmp/.X11-unix:/tmp/.X11-unix"\
+               " --volume /dev/input:/dev/input"
+               
 
     # bindings
     cmd += " -v %(source_dir)s:%(home_directory)s/cliport " \
@@ -83,7 +91,7 @@ if __name__=="__main__":
     cmd += "-it "
     cmd += args.image
     cmd_endxhost = "xhost -local:root"
-
+    print("command:\n", cmd)
     print("command = \n \n", cmd, "\n", cmd_endxhost)
     print("")
 
