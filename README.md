@@ -159,7 +159,7 @@ python cliport/train.py train.task=stack-block-pyramid-seq-seen-colors \
 Iteratively evaluate all the checkpoints on `val` and save the results in `exps/<task>-train/checkpoints/<task>-val-results.json`: 
 
 ```bash
-python cliport/test.py eval_task=stack-block-pyramid-seq-seen-colors \
+python cliport/eval.py eval_task=stack-block-pyramid-seq-seen-colors \
                        agent=cliport \
                        n_demos=100 \
                        train_demos=1000 \
@@ -172,7 +172,7 @@ python cliport/test.py eval_task=stack-block-pyramid-seq-seen-colors \
 Choose the best checkpoint from validation to run on the `test` set and save the results in `exps/<task>-train/checkpoints/<task>-test-results.json`:
 
 ```bash
-python cliport/test.py eval_task=stack-block-pyramid-seq-seen-colors \
+python cliport/eval.py eval_task=stack-block-pyramid-seq-seen-colors \
                        agent=cliport \
                        n_demos=100 \
                        train_demos=1000 \
@@ -206,7 +206,7 @@ python cliport/train.py train.task=multi-language-conditioned \
 Run validation with a trained `multi-language-conditioned` multi-task model on `stack-block-pyramid-seq-seen-colors`:
 
 ```bash
-python cliport/test.py model_task=multi-language-conditioned \
+python cliport/eval.py model_task=multi-language-conditioned \
                        eval_task=stack-block-pyramid-seq-seen-colors \
                        agent=cliport \
                        n_demos=100 \
@@ -221,7 +221,7 @@ python cliport/test.py model_task=multi-language-conditioned \
 Evaluate the best checkpoint on the `test` set:
 
 ```bash
-python cliport/test.py model_task=multi-language-conditioned \
+python cliport/eval.py model_task=multi-language-conditioned \
                        eval_task=stack-block-pyramid-seq-seen-colors \
                        agent=cliport \
                        n_demos=100 \
