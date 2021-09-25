@@ -58,7 +58,7 @@ python cliport/demos.py n=10 \
 ```   
 This will take a few minutes to finish. 
 
-Evaluate the best validation checkpoint on the test set:
+Evaluate the best validation checkpoint for `stack-block-pyramid-seq-seen-colors` on the test set:
 ```bash
 python cliport/eval.py model_task=multi-language-conditioned \
                        eval_task=stack-block-pyramid-seq-seen-colors \
