@@ -45,7 +45,7 @@ python setup.py develop
 
 A quick tutorial on evaluating a pre-trained multi-task model.
 
-Download a pre-trained checkpoint for `multi-language-conditioned` trained with 1000 demos:
+Download a [pre-trained checkpoint](https://drive.google.com/file/d/1w8yzqrIf-bTXp6NazQ_o8V-xiJB3tlli/view?usp=sharing) for `multi-language-conditioned` trained with 1000 demos:
 ```bash
 python scripts/quickstart_download.py
 ```
@@ -79,7 +79,7 @@ You can evaluate the same `multi-language-conditioned` model on other tasks. Fir
 
 ### Google Scanned Objects
 
-Download center-of-mass (COM) corrected Google Scanned Objects:
+Download center-of-mass (COM) corrected [Google Scanned Objects](https://drive.google.com/file/d/1xMB0jKKfpigsHlwr72Kq9plNJRjMkl_g/view?usp=sharing):
 ```bash
 python scripts/google_objects_download.py
 ```
