@@ -40,7 +40,8 @@ def main(vcfg):
                                             tcfg,
                                             group=eval_task,
                                             mode=mode,
-                                            n_demos=vcfg['n_demos'], augment=False)
+                                            n_demos=vcfg['n_demos'],
+                                            augment=False)
     else:
         ds = dataset.RavensDataset(os.path.join(vcfg['data_dir'], f"{eval_task}-{mode}"),
                                    tcfg,
