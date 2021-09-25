@@ -123,9 +123,7 @@ python cliport/demos.py n=1000 \
                         mode=train 
 ```
 
-You can also do a sequential sweep with `-m` and comma-separated params `task=towers-of-hanoi-seq-seen-colors,stack-block-pyramid-seq-seen-colors`. Use `disp=True` to visualize the data generation.  
-
-**Note:** The full dataset requires [~1.6TB of storage](https://i.kym-cdn.com/photos/images/newsfeed/000/515/629/9bd.gif), which includes both language-conditioned and demo-conditioned (original TransporterNets) tasks. It's recommend that you start with single-task training if you don't have enough storage space.
+You can also do a sequential sweep with `-m` and comma-separated params `task=towers-of-hanoi-seq-seen-colors,stack-block-pyramid-seq-seen-colors`. Use `disp=True` to visualize the data generation.
 
 #### Full Dataset
 
@@ -134,7 +132,7 @@ Run [`generate_dataset.sh`](scripts/generate_datasets.sh) to generate the full d
 ```bash
 sh scripts/generate_dataset.sh data
 ```
-**Note:** This script is not parallelized and will take a long time (maybe days) to finish. 
+**Note:** This script is not parallelized and will take a long time (maybe days) to finish. The full dataset requires [~1.6TB of storage](https://i.kym-cdn.com/photos/images/newsfeed/000/515/629/9bd.gif), which includes both language-conditioned and demo-conditioned (original TransporterNets) tasks. It's recommend that you start with single-task training if you don't have enough storage space.
 
 ### Single-Task Training & Evaluation
 
