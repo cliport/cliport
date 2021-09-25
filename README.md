@@ -27,7 +27,8 @@ git clone https://github.com/cliport/cliport.git
 
 Setup virtualenv and install requirements:
 ```bash
-virtualenv -p $(which python3.8) --system-site-packages cliport_env # or whichever package manager you prefer 
+# setup virtualenv with whichever package manager you prefer
+virtualenv -p $(which python3.8) --system-site-packages cliport_env  
 source cliport_env/bin/activate
 pip install --upgrade pip
 
@@ -72,7 +73,7 @@ python cliport/eval.py model_task=multi-language-conditioned \
 ```
 If you are on a headless machine turn off the visualization with `disp=False`. 
 
-You can evaluate the same `multi-language-conditioned` model on other tasks. First generate a `val` set for the task and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)).
+You can evaluate the same `multi-language-conditioned` model on other tasks. First generate a `val` set for the task and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)). 
 
 ## Download
 
