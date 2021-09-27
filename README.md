@@ -1,6 +1,6 @@
 # CLIPort
 
-[**CLIPort: What and Where Pathways for Robotic Manipulation**](https://openreview.net/pdf?id=9uFiX_HRsIL)  
+[**CLIPort: What and Where Pathways for Robotic Manipulation**](https://arxiv.org/pdf/2109.12098.pdf)  
 [Mohit Shridhar](https://mohitshridhar.com/), [Lucas Manuelli](http://lucasmanuelli.com/), [Dieter Fox](https://homes.cs.washington.edu/~fox/)  
 [CoRL 2021](https://www.robot-learning.org/) 
 
