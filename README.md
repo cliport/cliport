@@ -242,7 +242,7 @@ python cliport/eval.py model_task=multi-language-conditioned \
 - **Scaling**: The code only works for batch size 1. See [#issue1](https://github.com/cliport/cliport/issues/1) for reference. In theory, there is nothing preventing larger batch sizes other than GPU memory constraints.
 - **Memory and Storage**: There are lots of places where memory usage can be reduced. You don't need 3 copies of the same CLIP ResNet50 and you don't need to save its weights in checkpoints since it's frozen anyway. Dataset sizes could be dramatically reduced with better storage formats and compression. 
 - **Frameworks**: There are lots of leftover NumPy bits from when I was trying to reproduce the TransportNets results. I'll try to clean up when I get some time. 
-- **Rotation Augmentation**: All tasks use the same distrubution for sampling SE(2) rotation perturbations. This obviously leads to issues with tasks that involve spatial relationships like 'left' or 'forward'.  
+- **Rotation Augmentation**: All tasks use the same distribution for sampling SE(2) rotation perturbations. This obviously leads to issues with tasks that involve spatial relationships like 'left' or 'forward'.  
 - **Evaluation Runs**: In an ideal setting, the evaluation metrics should be averaged over 3 or more repetitions with different seeds. This might be feasible if you are working just with multi-task models. 
 - **Duplicate Training Sets**: The train sets of some `*seen` and `*unseen` tasks are identical, and only the val and test sets differ for purposes of evaluating generalization performance. So you might not need two duplicate train sets or train two separate models.   
 - **Other Limitations**: Checkout Appendix I in the paper.
