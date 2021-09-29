@@ -391,7 +391,7 @@ class RavensMultiTaskDataset(RavensDataset):
         'multi-language-conditioned': {
             'train': [
                 'align-rope',
-                'assembling-kits-seq-unseen-colors',
+                'assembling-kits-seq-unseen-colors', # unseen here refers to training only seen splits to be consitent with single-task setting
                 'packing-boxes-pairs-unseen-colors',
                 'packing-shapes',
                 'packing-unseen-google-objects-seq',
