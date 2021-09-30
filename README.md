@@ -187,7 +187,7 @@ python cliport/eval.py eval_task=stack-block-pyramid-seq-seen-colors \
 
 #### Training
 
-Train multi-task models by specifying `task=multi-language-conditioned`, `task=multi-loo-packing-box-pairs-unseen-colors` (`loo` stands for leave-one-out or multi-attr tasks) etc.
+Train multi-task models by specifying `task=multi-language-conditioned`, `task=multi-attr-packing-box-pairs-unseen-colors` etc.
 
 ```bash
 python cliport/train.py train.task=multi-language-conditioned \
