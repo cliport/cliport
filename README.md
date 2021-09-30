@@ -236,7 +236,7 @@ python cliport/eval.py model_task=multi-language-conditioned \
                        exp_folder=exps 
 ```
 
-## Disclaimers
+## Disclaimers & Limitations
 
 - **Code Quality Level**: Tired grad student. 
 - **Scaling**: The code only works for batch size 1. See [#issue1](https://github.com/cliport/cliport/issues/1) for reference. In theory, there is nothing preventing larger batch sizes other than GPU memory constraints.
