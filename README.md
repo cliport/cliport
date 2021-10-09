@@ -12,7 +12,7 @@ For the latest updates, see: [cliport.github.io](https://cliport.github.io)
 
 ## Guides
 
-- Getting Started: [Installation](#installation), [Quick Tutorial](#quickstart), [Checkpoints & Objects](#download)
+- Getting Started: [Installation](#installation), [Quick Tutorial](#quickstart), [Checkpoints & Objects](#download), [Hardware Requirements](#hardware-requirments)
 - Data Generation: [Dataset](#dataset-generation), [Tasks](cliport/tasks)
 - Training & Evaluation: [Single Task](#single-task-training--evaluation), [Multi Task](#multi-task-training--evaluation)
 - Miscellaneous: [Notebooks](#notebooks), [Docker Guide](#docker-guide), [Disclaimers](#disclaimers--limitations), [Real-Robot Training FAQ](#real-robot-training-faq)
@@ -104,7 +104,7 @@ python cliport/eval.py model_task=multi-language-conditioned \
                        disp=True
 ```
 
-## Hardware 
+## Hardware Requirements 
 
 Tested on:
 - **GPU** - NVIDIA P100 (~8.5GB memory)
