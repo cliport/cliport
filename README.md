@@ -12,7 +12,7 @@ For the latest updates, see: [cliport.github.io](https://cliport.github.io)
 
 ## Guides
 
-- Getting Started: [Installation](#installation), [Quick Tutorial](#quickstart), [Checkpoints & Objects](#download), [Hardware Requirements](#hardware-requirments)
+- Getting Started: [Installation](#installation), [Quick Tutorial](#quickstart), [Checkpoints & Objects](#download), [Hardware Requirements](##hardware-requirements)
 - Data Generation: [Dataset](#dataset-generation), [Tasks](cliport/tasks)
 - Training & Evaluation: [Single Task](#single-task-training--evaluation), [Multi Task](#multi-task-training--evaluation)
 - Miscellaneous: [Notebooks](#notebooks), [Docker Guide](#docker-guide), [Disclaimers](#disclaimers--limitations), [Real-Robot Training FAQ](#real-robot-training-faq)
