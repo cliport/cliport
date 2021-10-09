@@ -73,7 +73,7 @@ python cliport/eval.py model_task=multi-language-conditioned \
 ```
 If you are on a headless machine turn off the visualization with `disp=False`. 
 
-You can evaluate the same `multi-language-conditioned` model on other tasks. First generate a `val` set for the task and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)). 
+You can evaluate the same `multi-language-conditioned` model on other tasks. First generate a `val` set for the task and then specify `eval_task=<task_name>` with `mode=val` and `checkpoint_type=val_missing` (the quickstart doesn't include validation results for all tasks; download all task results from [here](#download)).
 
 ## Download
 
@@ -103,6 +103,14 @@ python cliport/eval.py model_task=multi-language-conditioned \
                        update_results=True \
                        disp=True
 ```
+
+## Hardware 
+
+Tested on:
+- **GPU** - NVIDIA P100 (~8.5GB memory)
+- **CPU** - Intel Xeon (Quad Core)
+- **RAM** - 32GB
+- **OS** - Ubuntu 16.04, 18.04
 
 ## Training and Evaluation
 
