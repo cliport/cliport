@@ -1,6 +1,6 @@
 # Tasks
 
-## Descriptions
+### Descriptions
 
 This folder contains a total of 10 goal-conditioned (language or image) and 8 demo-conditioned (original TransporterNets) tasks. 8 out of the 10 goal-conditioned tasks contain two splits: **seen** and **unseen**. The **full** version is a union of both **seen** and **unseen** attributes made specifically for multi-attr training. Sequential tasks that involve following instructions in a specific order are indicated by **seq** in their names.
 
@@ -51,9 +51,15 @@ See [__init__.py](__init__.py) for the full list of demo-conditioned and goal-co
 'towers-of-hanoi-seq-full': TowersOfHanoiSeqFull,
 ```
 
-## Adding New Tasks
+
+
+### Adding New Tasks
 
 See [put_block_in_bowl.py](put_block_in_bowl.py) for an example on how a task is specified. Creating a new task involves: (1) setting up a scene with the desired objects, (2) specifying goals with a language instruction and target "zones" or "poses", (3) defining an evaluation metric that is either sequential or non-sequential. See the original [Ravens codebase](https://github.com/google-research/ravens) for more details on task specification and organization.
+
+### Correcting COM for Google Scanned Objects
+
+By default all [Google Scanned Objects](https://app.ignitionrobotics.org/GoogleResearch/fuel/collections/Google%20Scanned%20Objects) have COMs (Center of Mass) at the base of the object, which leads to weird behavior with the physics engine. To correct this, I manually edited the COM of each `.obj` file to be the geometric center of the mesh with [Blender](https://www.blender.org/). See this [guide on editing COMs](https://blender.stackexchange.com/questions/14294/how-to-recenter-an-objects-origin) for reference.
 
 ## Credit
 
