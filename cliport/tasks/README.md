@@ -59,7 +59,7 @@ See [put_block_in_bowl.py](put_block_in_bowl.py) for an example on how a task is
 
 ### Correcting COM for Google Scanned Objects
 
-By default all [Google Scanned Objects](https://app.ignitionrobotics.org/GoogleResearch/fuel/collections/Google%20Scanned%20Objects) have COMs (Center of Mass) at the base of the object, which leads to weird behavior with the physics engine. To correct this, I manually edited the COM of each `.obj` file to be the geometric center of the mesh with [Blender](https://www.blender.org/). See this [guide on editing COMs](https://blender.stackexchange.com/questions/14294/how-to-recenter-an-objects-origin) for reference.
+By default all [Google Scanned Objects](https://app.ignitionrobotics.org/GoogleResearch/fuel/collections/Google%20Scanned%20Objects) have COMs (Center of Mass) at the base of the object, which leads to weird behavior with the physics engine. To correct this, I manually edited the COM of each `.obj` file to be the geometric center of the mesh with [Blender](https://www.blender.org/). See this [guide on editing COMs](https://blender.stackexchange.com/questions/14294/how-to-recenter-an-objects-origin) for reference. After correction, the original `.obj` can be overwritten using Blender's Export option.
 
 ## Credit
 
