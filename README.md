@@ -258,10 +258,10 @@ python cliport/eval.py model_task=multi-language-conditioned \
 
 ## Notebooks
 
-- [CLIP Playground in Colab](https://github.com/kevinzakka/clip_playground) by [Kevin Zakka](https://kzakka.com/): This notebook might be a good way of gauging what sort of visual attributes CLIP can ground with language. But note that CLIPort does **NOT** do "object detection", but instead directly "detects actions".
+- [CLIP Playground in Colab](https://github.com/kevinzakka/clip_playground) by [Kevin Zakka](https://kzakka.com/): A zero-shot object detector with just CLIP to see what sort of language it can ground. But note that CLIPort does 'detect objects' but instead directly 'detects actions'.
 - [Dataset Visualizer](notebooks/dataset.ipynb): Visualizes raw data and expert labels for pre-generated datasets. 
-- [Affordance Heatmaps](notebooks/affordances.ipynb): Visualizes affordances predictions from a pre-trained agent like `cliport`.
-- [Evaluation Results](notebooks/results.ipynb): Prints success scores.
+- [Affordance Heatmaps](notebooks/affordances.ipynb): Visualizes affordance predictions from a pre-trained agent like `cliport`.
+- [Evaluation Results](notebooks/results.ipynb): Prints success scores from evaluation runs.
 
 ## Docker Guide
 
