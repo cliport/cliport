@@ -57,6 +57,11 @@ class RavensDataset(Dataset):
         if self.n_demos > 0:
             self.images = self.cfg['dataset']['images']
             self.cache = self.cfg['dataset']['cache']
+
+            # Check if there sufficient demos in the dataset
+            if self.n_demos > self.n_episodes:
+                raise Exception(f"Requested training on {self.n_demos} demos, but only {self.n_episodes} demos exist in the dataset path: {self._path}.")
+
             episodes = np.random.choice(range(self.n_episodes), self.n_demos, False)
             self.set(episodes)
 
