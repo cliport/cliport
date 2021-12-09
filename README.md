@@ -314,7 +314,7 @@ Note that CLIPort is not doing "object detection". CLIPort fine-tunes CLIP's rep
 
 #### What are the best hyperparams for real-robot training?
 
-The [default settings](cliport/cfg/train.yaml) should work well. Although recently, I have been playing around with using FiLM [(Perez et. al, 2017)](https://distill.pub/2021/multimodal-neurons/) to fuse language features inspired by BC-0 [(Jang et. al, 2021)](https://openreview.net/forum?id=8kbp23tSGYv). Qualitatively, it seems like FiLM is better for reading text etc. but I haven't conducted a full quantitative analysis. Try it out yourself with `train.agent=two_stream_clip_film_lingunet_lat_transporter` (non-residual FiLM).      
+The [default settings](cliport/cfg/train.yaml) should work well. Although recently, I have been playing around with using FiLM [(Perez et. al, 2017)](https://distill.pub/2018/feature-wise-transformations/) to fuse language features inspired by BC-0 [(Jang et. al, 2021)](https://openreview.net/forum?id=8kbp23tSGYv). Qualitatively, it seems like FiLM is better for reading text etc. but I haven't conducted a full quantitative analysis. Try it out yourself with `train.agent=two_stream_clip_film_lingunet_lat_transporter` (non-residual FiLM).      
 
 #### How to pick the best checkpoint for real-robot tasks?
 
