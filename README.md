@@ -108,8 +108,10 @@ python cliport/eval.py model_task=multi-language-conditioned \
 
 ## Hardware Requirements 
 
-Tested on:
-- **GPU** - NVIDIA P100 (~8.5GB memory)
+A single NVIDIA GPU with **8.5** to **9.5GB** memory should be sufficient for training and evaluation.
+
+Tested with:
+- **GPU** - NVIDIA P100
 - **CPU** - Intel Xeon (Quad Core)
 - **RAM** - 32GB
 - **OS** - Ubuntu 16.04, 18.04
@@ -256,6 +258,7 @@ python cliport/eval.py model_task=multi-language-conditioned \
 - **Evaluation Runs**: In an ideal setting, the evaluation metrics should be averaged over 3 or more repetitions with different seeds. This might be feasible if you are working just with multi-task models. 
 - **Duplicate Training Sets**: The train sets of some `*seen` and `*unseen` tasks are identical, and only the val and test sets differ for purposes of evaluating generalization performance. So you might not need two duplicate train sets or train two separate models.   
 - **Image Resolution**: The input resolution of `320 x 160` might be too small for some tasks with tiny objects, especially for packing Google objects. Larger resolutions might help improve legibility.   
+- **Disadvantaged Multi-Task Models**: To avoid cheating on `packing-seen-google-object-*` tasks, the multi-task models are never trained on the full `seen` split of Google Scanned Objects. So a single-task model trained on `packing-seen-google-object-*` will have seen more objects than the comparable multi-task model.
 - **Other Limitations**: Checkout Appendix I in the paper.
 
 ## Notebooks
