@@ -15,7 +15,7 @@ For the latest updates, see: [cliport.github.io](https://cliport.github.io)
 - Getting Started: [Installation](#installation), [Quick Tutorial](#quickstart), [Checkpoints & Objects](#download), [Hardware Requirements](#hardware-requirements), [Model Card](model-card.md)
 - Data Generation: [Dataset](#dataset-generation), [Tasks](cliport/tasks)
 - Training & Evaluation: [Single Task](#single-task-training--evaluation), [Multi Task](#multi-task-training--evaluation)
-- Miscellaneous: [Notebooks](#notebooks), [Docker Guide](#docker-guide), [Disclaimers](#disclaimers--limitations), [Real-Robot Training FAQ](#real-robot-training-faq)
+- Miscellaneous: [Notebooks](#notebooks), [Docker Guide](#docker-guide), [Disclaimers](#disclaimers--limitations), [Real-Robot Training FAQ](#real-robot-training-faq), [Recording Videos](#recording-videos)
 - References: [Citations](#citations), [Acknowledgements](#acknowledgements)
 
 ## Installation
@@ -247,6 +247,28 @@ python cliport/eval.py model_task=multi-language-conditioned \
                        type=single \
                        exp_folder=exps 
 ```
+
+## Recording Videos
+
+To save high-resolution videos of agent executions, set `record.save_video=True`:
+
+```bash
+python cliport/eval.py model_task=multi-language-conditioned \
+                       eval_task=stack-block-pyramid-seq-seen-colors \
+                       agent=cliport \
+                       mode=test \
+                       n_demos=10 \
+                       train_demos=100 \
+                       exp_folder=cliport_exps \
+                       checkpoint_type=test_best \
+                       update_results=True \
+                       disp=True \
+                       record.save_video=True
+```
+
+This will save videos inside `${model_dir}/${exp_folder}/${eval_task}-${agent}-n${train_demos}-train/videos/`.  
+
+**Note:** Rendering at high-resolutions is super slow and will take a long time to finish.
 
 ## Disclaimers & Limitations
 
