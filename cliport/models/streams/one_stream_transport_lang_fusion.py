@@ -20,5 +20,5 @@ class OneStreamTransportLangFusion(TwoStreamTransportLangFusion):
 
     def transport(self, in_tensor, crop, l):
         logits = self.key_stream_one(in_tensor, l)
-        kernel = self.key_stream_one(crop, l)
+        kernel = self.query_stream_one(crop, l)
         return logits, kernel
