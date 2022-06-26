@@ -294,7 +294,7 @@ def apply_transform(transform_to_from, points_from):
     if len(transform_to_from.shape) == 2:
         ones = np.ones((1, num_points))
 
-        # makes these each into homogenous vectors
+        # makes these each into homogeneous vectors
         points_from = np.vstack((points_from, ones))  # [4,N]
         points_to = transform_to_from @ points_from  # [4,N]
         return points_to[0:3, :]  # [3,N]
