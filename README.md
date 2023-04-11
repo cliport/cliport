@@ -45,9 +45,9 @@ python setup.py develop
 
 A quick tutorial on evaluating a pre-trained multi-task model.
 
-Download a [pre-trained checkpoint](https://drive.google.com/file/d/1w8yzqrIf-bTXp6NazQ_o8V-xiJB3tlli/view?usp=sharing) for `multi-language-conditioned` trained with 1000 demos:
+Download a [pre-trained checkpoint](https://github.com/cliport/cliport/releases/download/v1.0.0/cliport_quickstart.zip) for `multi-language-conditioned` trained with 1000 demos:
 ```bash
-python scripts/quickstart_download.py
+sh scripts/quickstart_download.sh
 ```
 
 Generate a small `test` set of 10 instances for `stack-block-pyramid-seq-seen-colors` inside  `$CLIPORT_ROOT/data`:
@@ -81,9 +81,9 @@ Checkout [affordance.ipynb](notebooks/affordances.ipynb) to visualize affordance
 
 ### Google Scanned Objects
 
-Download center-of-mass (COM) corrected [Google Scanned Objects](https://drive.google.com/file/d/1xMB0jKKfpigsHlwr72Kq9plNJRjMkl_g/view?usp=sharing):
+Download center-of-mass (COM) corrected [Google Scanned Objects](https://github.com/cliport/cliport/releases/download/v1.0.0/google.zip):
 ```bash
-python scripts/google_objects_download.py
+sh scripts/google_objects_download.sh
 ```
 Credit: [Google](#acknowledgements).
 
