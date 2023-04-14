@@ -8,7 +8,8 @@ imageio-ffmpeg==0.4.5
 kornia==0.4.1
 matplotlib
 meshcat==0.0.18
-numpy
+# To solve [numpy] ModuleNotFoundError: No module named 'numpy.core._multiarray_umath'
+numpy==1.20.*
 opencv-python==4.1.2.30
 pybullet==3.0.4
 pytorch_lightning==1.0.3
@@ -21,3 +22,9 @@ torchvision==0.8.2
 transformers==4.3.2
 transforms3d==0.3.1
 wandb==0.10.15
+# To solve [wanb] TypeError: Descriptors cannot not be created directly.
+protobuf==3.20.*
+# To solve [PIL] ImportError: cannot import name '_imaging' from 'PIL'
+Pillow
+# To solve [transformers] packaging.version.InvalidVersion: Invalid version: '0.10.1,<0.11'
+packaging==21.3
