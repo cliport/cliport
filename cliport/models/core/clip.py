@@ -531,7 +531,7 @@ def available_models():
     return list(_MODELS.keys())
 
 
-def load_clip(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=True):
+def load_clip(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=False):
     if name not in _MODELS:
         raise RuntimeError(f"Model {name} not found; available models = {available_models()}")
 
