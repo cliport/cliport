@@ -1,5 +1,5 @@
 absl-py==0.7.0
-ftfy
+ftfy==6.1.1
 gdown==3.13.1
 gym==0.17.3
 hydra-core==1.0.5
@@ -9,22 +9,23 @@ kornia==0.4.1
 matplotlib
 meshcat==0.0.18
 # To solve [numpy] ModuleNotFoundError: No module named 'numpy.core._multiarray_umath'
-numpy==1.20.*
+numpy==1.20.3
 opencv-python==4.1.2.30
 pybullet==3.0.4
 pytorch_lightning==1.0.3
-regex
+regex==2023.3.23
 scikit-image==0.17.2
 scipy==1.4.1
-tdqm
+tdqm==4.65.0
 torch==2.0.0
 torchvision==0.2.2.post3
 transformers==4.3.2
 transforms3d==0.3.1
 wandb==0.10.15
 # To solve [wanb] TypeError: Descriptors cannot not be created directly.
-protobuf==3.20.*
-# To solve [PIL] ImportError: cannot import name '_imaging' from 'PIL'
-Pillow
+protobuf==3.20.3
+# Pillow: solves [PIL] ImportError: cannot import name '_imaging' from 'PIL'
+# v6.2.1: solves [PIL] ImportError: cannot import name 'PILLOW_VERSION' from 'PIL' (https://github.com/python-pillow/Pillow/issues/4130#issuecomment-555434800)
+Pillow==6.2.1
 # To solve [transformers] packaging.version.InvalidVersion: Invalid version: '0.10.1,<0.11'
 packaging==21.3
