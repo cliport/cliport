@@ -88,7 +88,7 @@ sh scripts/google_objects_download.sh
 Credit: [Google](#acknowledgements).
 
 ### Pre-trained Checkpoints and Result JSONs
-This [Google Drive Folder](https://drive.google.com/drive/folders/1BLczZJcVFbaP_sjQ9_sLvUwyLDcq7T5R?usp=sharing) contains pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and validation/test result JSONs for all tasks. The `*val-results.json` files contain the name of the best checkpoint (from validation) to be evaluated on the `test` set.
+This [Google Drive Folder](https://drive.google.com/drive/folders/0B2LlLwoO3nfZfk1TZjhhbXN2dDFSSzktdU5UN3MtbGxfYXNBWlR2SDN0OUdzMkVrdnU3TU0?resourcekey=0-upqOBPNOlOrAzI7FnQuCiQ&usp=share_link) contains pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and validation/test result JSONs for all tasks. The `*val-results.json` files contain the name of the best checkpoint (from validation) to be evaluated on the `test` set.
 
 **Note:** Google Drive might complain about bandwidth restrictions. I recommend using [rclone](https://rclone.org/drive/) with API access enabled.
 
