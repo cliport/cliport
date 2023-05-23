@@ -488,7 +488,8 @@ def build_model(state_dict: dict):
     )
 
     for key in ["input_resolution", "context_length", "vocab_size"]:
-        del state_dict[key]
+        if key in state_dict.keys():
+            del state_dict[key]
 
     convert_weights(model)
     model.load_state_dict(state_dict)
@@ -531,7 +532,7 @@ def available_models():
     return list(_MODELS.keys())
 
 
-def load_clip(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=True):
+def load_clip(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=False):
     if name not in _MODELS:
         raise RuntimeError(f"Model {name} not found; available models = {available_models()}")
 
