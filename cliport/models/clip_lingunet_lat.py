@@ -14,7 +14,7 @@ from cliport.models.core.fusion import FusionConvLat
 class CLIPLingUNetLat(nn.Module):
     """ CLIP RN50 with U-Net skip connections and lateral connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device, preprocess):
+    def __init__(self, input_shape, output_dim, cfg, device, preprocess, clip_model):
         super(CLIPLingUNetLat, self).__init__()
         self.input_shape = input_shape
         self.output_dim = output_dim
@@ -26,14 +26,9 @@ class CLIPLingUNetLat(nn.Module):
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
         self.preprocess = preprocess
+        self.clip_rn50 = clip_model
 
-        self._load_clip()
         self._build_decoder()
-
-    def _load_clip(self):
-        model, _ = load_clip("RN50", device=self.device)
-        self.clip_rn50 = build_model(model.state_dict()).to(self.device)
-        del model
 
     def _build_decoder(self):
         # language

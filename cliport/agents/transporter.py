@@ -1,9 +1,11 @@
 import os
 import numpy as np
+import time
 
 import torch
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
+from cliport.models.core.clip import build_model, load_clip
 
 from cliport.tasks import cameras
 from cliport.utils import utils
@@ -21,6 +23,7 @@ class TransporterAgent(LightningModule):
         utils.set_seed(0)
 
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # this is bad for PL :(
+        self.automatic_optimization=False
         self.name = name
         self.cfg = cfg
         self.train_ds = train_ds
@@ -33,22 +36,33 @@ class TransporterAgent(LightningModule):
         self.n_rotations = cfg['train']['n_rotations']
 
         self.pix_size = 0.003125
-        self.in_shape = (320, 160, 6)
+        self.in_shape = (256, 160, 6)
+        #self.cam_config = cameras.D435Franka.CONFIG
         self.cam_config = cameras.RealSenseD415.CONFIG
-        self.bounds = np.array([[0.25, 0.75], [-0.5, 0.5], [0, 0.28]])
+        self.bounds = np.array([[0.1, 0.6], [-0.4, 0.4], [-0.05, 0.3]])
 
         self.val_repeats = cfg['train']['val_repeats']
         self.save_steps = cfg['train']['save_steps']
 
+        self._load_clip()
         self._build_model()
         self._optimizers = {
             'attn': torch.optim.Adam(self.attention.parameters(), lr=self.cfg['train']['lr']),
+            'attn_rot': torch.optim.Adam(self.attention_rot.parameters(), lr=self.cfg['train']['lr']),
             'trans': torch.optim.Adam(self.transport.parameters(), lr=self.cfg['train']['lr'])
         }
         print("Agent: {}, Logging: {}".format(name, cfg['train']['log']))
 
+    def _load_clip(self):
+        model, _ = load_clip("RN50", device=self.device)
+        self.clip_rn50 = build_model(model.state_dict()).to(self.device)
+        del model
+        for param in self.clip_rn50.parameters():
+            param.requires_grad = False
+
     def _build_model(self):
         self.attention = None
+        self.attention_rot = None
         self.transport = None
         raise NotImplementedError()
 
@@ -97,9 +111,9 @@ class TransporterAgent(LightningModule):
         # Backpropagate.
         if backprop:
             attn_optim = self._optimizers['attn']
+            attn_optim.zero_grad()
             self.manual_backward(loss, attn_optim)
             attn_optim.step()
-            attn_optim.zero_grad()
 
         # Pixel and Rotation error (not used anywhere).
         err = {}
@@ -115,6 +129,60 @@ class TransporterAgent(LightningModule):
                 'dist': np.linalg.norm(np.array(p) - p0_pix, ord=1),
                 'theta': np.absolute((theta - p0_theta) % np.pi)
             }
+        return loss, err
+
+    def attn_rot_forward(self, inp, softmax=True):
+        raise NotImplementedError()
+
+    def attn_rot_training_step(self, frame, backprop=True, compute_err=False):
+        raise NotImplementedError()
+
+    def attn_rot_criterion(self, backprop, compute_err, inp, out, p, theta):
+        # Get label.
+        theta_i = theta / (2 * np.pi / self.attention_rot.n_rotations)
+        theta_i = np.int32(np.round(theta_i)) % self.attention_rot.n_rotations
+        label_size = (64, 64,) + (self.attention_rot.n_rotations,)
+        label = np.zeros(label_size)
+        label[0, 0, theta_i] = 1
+        #label = label.transpose((2, 0, 1))
+        #print("Label shape: ", label.shape)
+        label = label.reshape(1, np.prod(label.shape))
+        label = torch.from_numpy(label).to(dtype=torch.float, device=out.device)
+
+        #print("Out minmax: ", out.min(), out.max())
+
+        # Get loss.
+        loss = self.cross_entropy_with_logits(out, label)
+
+        # Backpropagate.
+        if backprop:
+            #print("Inside attention rot backdrop")
+            attn_rot_optim = self._optimizers['attn_rot']
+            #print(attn_rot_optim)
+            attn_rot_optim.zero_grad()
+            self.manual_backward(loss, attn_rot_optim)
+            attn_rot_optim.step()
+
+        # Pixel and Rotation error (not used anywhere).
+        err = {}
+        if compute_err:
+            pick_conf = self.attn_rot_forward(inp)
+            pick_conf = pick_conf.detach().cpu().numpy()
+            argmax = np.argmax(pick_conf)
+            argmax = np.unravel_index(argmax, shape=pick_conf.shape)
+            p0_pix = argmax[:2]
+            p0_theta = argmax[2] * (2 * np.pi / pick_conf.shape[2])
+
+            err = {
+                'dist': 0.0,
+                'theta': np.absolute((theta - p0_theta) % np.pi)
+            }
+        #print("Attn Rotator loss: ", loss)
+        #print("Attn Rotator theta: ", theta)
+        #print("Attn Rotator theta_i: ", theta_i)
+        #print("Attn Rotator p0_theta: ", argmax[2])
+        #print("Attn Rotator p0_pix: ", p0_pix)
+        #print('Attn Rotator Error: ', err)
         return loss, err
 
     def trans_forward(self, inp, softmax=True):
@@ -152,9 +220,9 @@ class TransporterAgent(LightningModule):
         loss = self.cross_entropy_with_logits(output, label)
         if backprop:
             transport_optim = self._optimizers['trans']
+            transport_optim.zero_grad()
             self.manual_backward(loss, transport_optim)
             transport_optim.step()
-            transport_optim.zero_grad()
  
         # Pixel and Rotation error (not used anywhere).
         err = {}
@@ -175,21 +243,28 @@ class TransporterAgent(LightningModule):
         return err, loss
 
     def training_step(self, batch, batch_idx):
+        # print("Memory at start: ", torch.cuda.memory_summary())
         self.attention.train()
+        self.attention_rot.train()
         self.transport.train()
-
+        # print("Memory after train set model: ", torch.cuda.memory_summary())
+        # 3.5GB
         frame, _ = batch
 
         # Get training losses.
         step = self.total_steps + 1
-        loss0, err0 = self.attn_training_step(frame)
+        loss0, _ = self.attn_training_step(frame)
+        loss1, _ = self.attn_rot_training_step(frame)
+        # print("Memory after attention training step: ", torch.cuda.memory_summary())
+        # 5.4GB
         if isinstance(self.transport, Attention):
-            loss1, err1 = self.attn_training_step(frame)
+            loss2, err1 = self.attn_training_step(frame)
         else:
-            loss1, err1 = self.transport_training_step(frame)
-        total_loss = loss0 + loss1
+            loss2, err1 = self.transport_training_step(frame)
+        total_loss = loss0 + loss1 + loss2
         self.log('tr/attn/loss', loss0)
-        self.log('tr/trans/loss', loss1)
+        self.log('tr/attn_rot/loss', loss1)
+        self.log('tr/trans/loss', loss2)
         self.log('tr/loss', total_loss)
         self.total_steps = step
 
@@ -203,14 +278,15 @@ class TransporterAgent(LightningModule):
 
     def check_save_iteration(self):
         global_step = self.trainer.global_step
-        if (global_step + 1) in self.save_steps:
+        if (global_step + 1) % 100 == 0:
             self.trainer.run_evaluation()
             val_loss = self.trainer.callback_metrics['val_loss']
-            steps = f'{global_step + 1:05d}'
-            filename = f"steps={steps}-val_loss={val_loss:0.8f}.ckpt"
-            checkpoint_path = os.path.join(self.cfg['train']['train_dir'], 'checkpoints')
-            ckpt_path = os.path.join(checkpoint_path, filename)
-            self.trainer.save_checkpoint(ckpt_path)
+            print('Validation Loss: ', val_loss)
+            #steps = f'{global_step + 1:05d}'
+            #filename = f"steps={steps}-val_loss={val_loss:0.8f}.ckpt"
+            #checkpoint_path = os.path.join(self.cfg['train']['train_dir'], 'checkpoints')
+            #ckpt_path = os.path.join(checkpoint_path, filename)
+            #self.trainer.save_checkpoint(ckpt_path)
 
         if (global_step + 1) % 1000 == 0:
             # save lastest checkpoint
@@ -224,23 +300,27 @@ class TransporterAgent(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         self.attention.eval()
+        self.attention_rot.eval()
         self.transport.eval()
 
-        loss0, loss1 = 0, 0
+        loss0, loss1, loss2 = 0, 0, 0
         assert self.val_repeats >= 1
         for i in range(self.val_repeats):
             frame, _ = batch
             l0, err0 = self.attn_training_step(frame, backprop=False, compute_err=True)
             loss0 += l0
+            l1, err1 = self.attn_rot_training_step(frame, backprop=False, compute_err=True)
+            loss1 += l1
             if isinstance(self.transport, Attention):
-                l1, err1 = self.attn_training_step(frame, backprop=False, compute_err=True)
-                loss1 += l1
+                l2, err2 = self.attn_training_step(frame, backprop=False, compute_err=True)
+                loss2 += l2
             else:
-                l1, err1 = self.transport_training_step(frame, backprop=False, compute_err=True)
-                loss1 += l1
+                l2, err2 = self.transport_training_step(frame, backprop=False, compute_err=True)
+                loss2 += l2
         loss0 /= self.val_repeats
         loss1 /= self.val_repeats
-        val_total_loss = loss0 + loss1
+        loss2 /= self.val_repeats
+        val_total_loss = loss0 + loss1 + loss2
 
         self.trainer.evaluation_loop.trainer.train_loop.running_loss.append(val_total_loss)
 
@@ -248,10 +328,13 @@ class TransporterAgent(LightningModule):
             val_loss=val_total_loss,
             val_loss0=loss0,
             val_loss1=loss1,
+            val_loss2=loss2,
             val_attn_dist_err=err0['dist'],
             val_attn_theta_err=err0['theta'],
-            val_trans_dist_err=err1['dist'],
-            val_trans_theta_err=err1['theta'],
+            val_attn_rot_dist_err=err1['dist'],
+            val_attn_rot_theta_err=err1['theta'],
+            val_trans_dist_err=err2['dist'],
+            val_trans_theta_err=err2['theta'],
         )
 
     def training_epoch_end(self, all_outputs):
@@ -262,28 +345,38 @@ class TransporterAgent(LightningModule):
         mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])
         mean_val_loss0 = np.mean([v['val_loss0'].item() for v in all_outputs])
         mean_val_loss1 = np.mean([v['val_loss1'].item() for v in all_outputs])
+        mean_val_loss2 = np.mean([v['val_loss2'].item() for v in all_outputs])
         total_attn_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
         total_attn_theta_err = np.sum([v['val_attn_theta_err'] for v in all_outputs])
+        total_attn_rot_dist_err = np.sum([v['val_attn_rot_dist_err'] for v in all_outputs])
+        total_attn_rot_theta_err = np.sum([v['val_attn_rot_theta_err'] for v in all_outputs])
         total_trans_dist_err = np.sum([v['val_trans_dist_err'] for v in all_outputs])
         total_trans_theta_err = np.sum([v['val_trans_theta_err'] for v in all_outputs])
 
         self.log('vl/attn/loss', mean_val_loss0)
-        self.log('vl/trans/loss', mean_val_loss1)
+        self.log('vl/attn_rot/loss', mean_val_loss1)
+        self.log('vl/trans/loss', mean_val_loss2)
         self.log('vl/loss', mean_val_total_loss)
         self.log('vl/total_attn_dist_err', total_attn_dist_err)
         self.log('vl/total_attn_theta_err', total_attn_theta_err)
+        self.log('vl/total_attn_rot_dist_err', total_attn_rot_dist_err)
+        self.log('vl/total_attn_rot_theta_err', total_attn_rot_theta_err)
         self.log('vl/total_trans_dist_err', total_trans_dist_err)
         self.log('vl/total_trans_theta_err', total_trans_theta_err)
 
         print("\nAttn Err - Dist: {:.2f}, Theta: {:.2f}".format(total_attn_dist_err, total_attn_theta_err))
+        print("\nAttn Rotator Err - Dist: {:.2f}, Theta: {:.2f}".format(total_attn_rot_dist_err, total_attn_rot_theta_err))
         print("Transport Err - Dist: {:.2f}, Theta: {:.2f}".format(total_trans_dist_err, total_trans_theta_err))
 
         return dict(
             val_loss=mean_val_total_loss,
-            val_loss0=mean_val_loss0,
+            mean_val_loss0=mean_val_loss0,
             mean_val_loss1=mean_val_loss1,
+            mean_val_loss2=mean_val_loss2,
             total_attn_dist_err=total_attn_dist_err,
             total_attn_theta_err=total_attn_theta_err,
+            total_attn_rot_dist_err=total_attn_rot_dist_err,
+            total_attn_rot_theta_err=total_attn_rot_theta_err,
             total_trans_dist_err=total_trans_dist_err,
             total_trans_theta_err=total_trans_theta_err,
         )
@@ -291,7 +384,7 @@ class TransporterAgent(LightningModule):
     def act(self, obs, info=None, goal=None):  # pylint: disable=unused-argument
         """Run inference and return best action given visual observations."""
         # Get heightmap from RGB-D images.
-        img = self.test_ds.get_image(obs)
+        img = utils.get_image(obs, self.cam_config, self.bounds, self.pix_size)
 
         # Attention model forward pass.
         pick_inp = {'inp_img': img}
@@ -339,7 +432,7 @@ class TransporterAgent(LightningModule):
         return self.test_ds
 
     def load(self, model_path):
-        self.load_state_dict(torch.load(model_path)['state_dict'])
+        self.load_state_dict(torch.load(model_path, map_location="cpu")['state_dict'])
         self.to(device=self.device_type)
 
 

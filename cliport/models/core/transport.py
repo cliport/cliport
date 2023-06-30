@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 class Transport(nn.Module):
 
-    def __init__(self, stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device):
+    def __init__(self, stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device, clip_model):
         """Transport (a.k.a Place) module."""
         super().__init__()
 
@@ -40,6 +40,8 @@ class Transport(nn.Module):
 
         self.rotator = utils.ImageRotator(self.n_rotations)
 
+        self.clip_rn50 = clip_model
+        
         self._build_nets()
 
     def _build_nets(self):

@@ -9,9 +9,9 @@ from cliport.models.core.transport import Transport
 class TwoStreamTransportLangFusion(Transport):
     """Two Stream Transport (a.k.a Place) module"""
 
-    def __init__(self, stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device):
+    def __init__(self, stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device, clip_model):
         self.fusion_type = cfg['train']['trans_stream_fusion_type']
-        super().__init__(stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device)
+        super().__init__(stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device, clip_model)
 
     def _build_nets(self):
         stream_one_fcn, stream_two_fcn = self.stream_fcn
@@ -19,9 +19,9 @@ class TwoStreamTransportLangFusion(Transport):
         stream_two_model = models.names[stream_two_fcn]
 
         self.key_stream_one = stream_one_model(self.in_shape, self.output_dim, self.cfg, self.device, self.preprocess)
-        self.key_stream_two = stream_two_model(self.in_shape, self.output_dim, self.cfg, self.device, self.preprocess)
+        self.key_stream_two = stream_two_model(self.in_shape, self.output_dim, self.cfg, self.device, self.preprocess, self.clip_rn50)
         self.query_stream_one = stream_one_model(self.kernel_shape, self.kernel_dim, self.cfg, self.device, self.preprocess)
-        self.query_stream_two = stream_two_model(self.kernel_shape, self.kernel_dim, self.cfg, self.device, self.preprocess)
+        self.query_stream_two = stream_two_model(self.kernel_shape, self.kernel_dim, self.cfg, self.device, self.preprocess, self.clip_rn50)
         self.fusion_key = fusion.names[self.fusion_type](input_dim=self.kernel_dim)
         self.fusion_query = fusion.names[self.fusion_type](input_dim=self.kernel_dim)
 
@@ -70,10 +70,10 @@ class TwoStreamTransportLangFusion(Transport):
 class TwoStreamTransportLangFusionLat(TwoStreamTransportLangFusion):
     """Two Stream Transport (a.k.a Place) module with lateral connections"""
 
-    def __init__(self, stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device):
+    def __init__(self, stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device, clip_model):
 
         self.fusion_type = cfg['train']['trans_stream_fusion_type']
-        super().__init__(stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device)
+        super().__init__(stream_fcn, in_shape, n_rotations, crop_size, preprocess, cfg, device, clip_model)
 
     def transport(self, in_tensor, crop, l):
         key_out_one, key_lat_one = self.key_stream_one(in_tensor)

@@ -10,7 +10,8 @@ echo "Generating dataset... Folder: $DATA_DIR"
 #############################
 ## Language-Conditioned Tasks
 
-LANG_TASKS='align-rope assembling-kits-seq-seen-colors assembling-kits-seq-unseen-colors packing-shapes packing-boxes-pairs-seen-colors packing-boxes-pairs-unseen-colors packing-seen-google-objects-seq packing-unseen-google-objects-seq packing-seen-google-objects-group packing-unseen-google-objects-group put-block-in-bowl-seen-colors put-block-in-bowl-unseen-colors stack-block-pyramid-seq-seen-colors stack-block-pyramid-seq-unseen-colors separating-piles-seen-colors separating-piles-unseen-colors towers-of-hanoi-seq-seen-colors towers-of-hanoi-seq-unseen-colors'
+#LANG_TASKS='align-rope assembling-kits-seq-seen-colors assembling-kits-seq-unseen-colors packing-shapes packing-boxes-pairs-seen-colors packing-boxes-pairs-unseen-colors packing-seen-google-objects-seq packing-unseen-google-objects-seq packing-seen-google-objects-group packing-unseen-google-objects-group put-block-in-bowl-seen-colors put-block-in-bowl-unseen-colors stack-block-pyramid-seq-seen-colors stack-block-pyramid-seq-unseen-colors separating-piles-seen-colors separating-piles-unseen-colors towers-of-hanoi-seq-seen-colors towers-of-hanoi-seq-unseen-colors'
+LANG_TASKS='stack-block-pyramid-seq-seen-colors'
 
 for task in $LANG_TASKS
     do
@@ -24,7 +25,8 @@ echo "Finished Language Tasks."
 #########################
 ## Demo-Conditioned Tasks
 
-DEMO_TASKS='align-box-corner assembling-kits block-insertion manipulating-rope packing-boxes palletizing-boxes place-red-in-green stack-block-pyramid sweeping-piles towers-of-hanoi'
+#DEMO_TASKS='align-box-corner assembling-kits block-insertion manipulating-rope packing-boxes palletizing-boxes place-red-in-green stack-block-pyramid sweeping-piles towers-of-hanoi'
+LANG_TASKS='stack-block-pyramid-seq-seen-colors'
 
 for task in $DEMO_TASKS
     do

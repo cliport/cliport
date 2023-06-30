@@ -4,7 +4,7 @@
 [Mohit Shridhar](https://mohitshridhar.com/), [Lucas Manuelli](http://lucasmanuelli.com/), [Dieter Fox](https://homes.cs.washington.edu/~fox/)  
 [CoRL 2021](https://www.robot-learning.org/) 
 
-CLIPort is an end-to-end imitation-learning agent that can learn a single language-conditioned policy for various tabletop tasks. The framework combines the broad semantic understanding (_what_) of [CLIP](https://openai.com/blog/clip/) with the spatial precision (_where_) of [TransporterNets](https://transporternets.github.io/) to learn generalizable skills from limited training demonstrations.
+CLIPort is an end-to-end imitation-learning agent that can learn a single language-conditioned policy for various tabletop tasks. The framework combines the broad semantic understanding (_what_) of [CLIP](https://openai.com/blog/clip/) with the spatial precision (_where_) of [TransporterFNets](https://transporternets.github.io/) to learn generalizable skills from limited training demonstrations.
 
 For the latest updates, see: [cliport.github.io](https://cliport.github.io)
 
@@ -45,9 +45,9 @@ python setup.py develop
 
 A quick tutorial on evaluating a pre-trained multi-task model.
 
-Download a [pre-trained checkpoint](https://github.com/cliport/cliport/releases/download/v1.0.0/cliport_quickstart.zip) for `multi-language-conditioned` trained with 1000 demos:
+Download a [pre-trained checkpoint](https://drive.google.com/file/d/1w8yzqrIf-bTXp6NazQ_o8V-xiJB3tlli/view?usp=sharing) for `multi-language-conditioned` trained with 1000 demos:
 ```bash
-sh scripts/quickstart_download.sh
+python scripts/quickstart_download.py
 ```
 
 Generate a small `test` set of 10 instances for `stack-block-pyramid-seq-seen-colors` inside  `$CLIPORT_ROOT/data`:
@@ -81,14 +81,14 @@ Checkout [affordance.ipynb](notebooks/affordances.ipynb) to visualize affordance
 
 ### Google Scanned Objects
 
-Download center-of-mass (COM) corrected [Google Scanned Objects](https://github.com/cliport/cliport/releases/download/v1.0.0/google.zip):
+Download center-of-mass (COM) corrected [Google Scanned Objects](https://drive.google.com/file/d/1xMB0jKKfpigsHlwr72Kq9plNJRjMkl_g/view?usp=sharing):
 ```bash
-sh scripts/google_objects_download.sh
+python scripts/google_objects_download.py
 ```
 Credit: [Google](#acknowledgements).
 
 ### Pre-trained Checkpoints and Result JSONs
-This [Google Drive Folder](https://drive.google.com/drive/folders/0B2LlLwoO3nfZfk1TZjhhbXN2dDFSSzktdU5UN3MtbGxfYXNBWlR2SDN0OUdzMkVrdnU3TU0?resourcekey=0-upqOBPNOlOrAzI7FnQuCiQ&usp=share_link) contains pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and validation/test result JSONs for all tasks. The `*val-results.json` files contain the name of the best checkpoint (from validation) to be evaluated on the `test` set.
+This [Google Drive Folder](https://drive.google.com/drive/folders/1BLczZJcVFbaP_sjQ9_sLvUwyLDcq7T5R?usp=sharing) contains pre-trained `multi-language-conditioned` checkpoints for `n=1,10,100,1000` and validation/test result JSONs for all tasks. The `*val-results.json` files contain the name of the best checkpoint (from validation) to be evaluated on the `test` set.
 
 **Note:** Google Drive might complain about bandwidth restrictions. I recommend using [rclone](https://rclone.org/drive/) with API access enabled.
 

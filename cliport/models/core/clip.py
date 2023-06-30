@@ -488,8 +488,10 @@ def build_model(state_dict: dict):
     )
 
     for key in ["input_resolution", "context_length", "vocab_size"]:
-        del state_dict[key]
-
+        try:
+            del state_dict[key]
+        except:
+            pass
     convert_weights(model)
     model.load_state_dict(state_dict)
     return model.eval()
@@ -531,12 +533,13 @@ def available_models():
     return list(_MODELS.keys())
 
 
-def load_clip(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=True):
+def load_clip(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_available() else "cpu", jit=False):
     if name not in _MODELS:
         raise RuntimeError(f"Model {name} not found; available models = {available_models()}")
 
     model_path = _download(_MODELS[name])
-    model = torch.jit.load(model_path, map_location=device if jit else "cpu").eval()
+    #model = torch.jit.load(model_path, map_location=device if jit else "cpu").eval()
+    model = torch.jit.load(model_path, map_location=device).eval()
     n_px = model.input_resolution.item()
 
     transform = Compose([

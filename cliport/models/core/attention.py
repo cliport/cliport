@@ -12,7 +12,7 @@ from cliport.utils import utils
 class Attention(nn.Module):
     """Attention (a.k.a Pick) module."""
 
-    def __init__(self, stream_fcn, in_shape, n_rotations, preprocess, cfg, device):
+    def __init__(self, stream_fcn, in_shape, n_rotations, preprocess, cfg, device, clip_model):
         super().__init__()
         self.stream_fcn = stream_fcn
         self.n_rotations = n_rotations
@@ -32,6 +32,8 @@ class Attention(nn.Module):
         self.in_shape = in_shape
 
         self.rotator = utils.ImageRotator(self.n_rotations)
+
+        self.clip_rn50 = clip_model
 
         self._build_nets()
 

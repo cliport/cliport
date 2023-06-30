@@ -21,6 +21,19 @@ import os
 import torch
 
 
+def get_image(obs, cam_config, bounds, pix_size):
+        """Stack color and height images image."""
+
+        # Get color and height maps from RGB-D images.
+        cmap, hmap = get_fused_heightmap_real(
+            obs, cam_config[0], bounds, pix_size)
+        img = np.concatenate((cmap,
+                              hmap[Ellipsis, None],
+                              hmap[Ellipsis, None],
+                              hmap[Ellipsis, None]), axis=2)
+
+        return img
+
 # -----------------------------------------------------------------------------
 # HEIGHTMAP UTILS
 # -----------------------------------------------------------------------------
@@ -86,6 +99,20 @@ def get_pointcloud(depth, intrinsics):
     return points
 
 
+def get_pointcloud_real(depth, intrinsics):
+    """Real robot variant of get_pointcloud"""
+    height, width = depth.shape
+    xlin = np.linspace(0, width - 1, width)
+    ylin = np.linspace(0, height - 1, height)
+    px, py = np.meshgrid(xlin, ylin)
+    px = (px - intrinsics[0, 2]) * (depth / intrinsics[0, 0])
+    py = (py - intrinsics[1, 2]) * (depth / intrinsics[1, 1])
+    points = np.float32([px, py, depth]).transpose(1, 2, 0)
+    # Convert mm to m
+    points/= 1000.0
+    return points
+
+
 def transform_pointcloud(points, transform):
     """Apply rigid transformation to 3D pointcloud.
   
@@ -120,6 +147,20 @@ def reconstruct_heightmaps(color, depth, configs, bounds, pixel_size):
         heightmaps.append(heightmap)
         colormaps.append(colormap)
     return heightmaps, colormaps
+
+
+def reconstruct_heightmaps_real(color, depth, config, bounds, pixel_size):
+    """Real robot variant of reconstruct_heightmaps"""
+    intrinsics = np.array(config['intrinsics']).reshape(3, 3)
+    xyz = get_pointcloud_real(depth, intrinsics)
+    position = np.array(config['position']).reshape(3, 1)
+    rotation = p.getMatrixFromQuaternion(config['rotation'])
+    rotation = np.array(rotation).reshape(3, 3)
+    transform = np.eye(4)
+    transform[:3, :] = np.hstack((rotation, position))
+    xyz = transform_pointcloud(xyz, transform)
+    heightmap, colormap = get_heightmap(xyz, color, bounds, pixel_size)
+    return heightmap, colormap
 
 
 def pix_to_xyz(pixel, height, bounds, pixel_size, skip_height=False):
@@ -270,7 +311,7 @@ def quatXYZW_to_eulerXYZ(quaternion_xyzw):  # pylint: disable=invalid-name
       rotation: a 3-parameter rotation, in xyz order, tuple of 3 floats
     """
     q = quaternion_xyzw
-    quaternion_wxyz = np.array([q[3], q[0], q[1], q[2]])
+    quaternion_wxyz = np.array([*q])
     euler_zxy = euler.quat2euler(quaternion_wxyz, axes='szxy')
     euler_xyz = (euler_zxy[1], euler_zxy[2], euler_zxy[0])
     return euler_xyz
@@ -323,10 +364,10 @@ def preprocess(img, dist='transporter'):
     transporter_depth_mean = 0.00509261
     transporter_depth_std = 0.00903967
 
-    franka_color_mean = [0.622291933, 0.628313992, 0.623031488]
-    franka_color_std = [0.168154213, 0.17626014, 0.184527364]
-    franka_depth_mean = 0.872146842
-    franka_depth_std = 0.195743116
+    franka_color_mean = [0.39386314, 0.38625932, 0.36986515]
+    franka_color_std = [0.28830895, 0.28679988, 0.28714353]
+    franka_depth_mean = 0.037814673
+    franka_depth_std = 0.026706815
 
     clip_color_mean = [0.48145466, 0.4578275, 0.40821073]
     clip_color_std = [0.26862954, 0.26130258, 0.27577711]
@@ -404,6 +445,14 @@ def get_fused_heightmap(obs, configs, bounds, pix_size):
     cmap = np.uint8(np.round(cmap))
     hmap = np.max(heightmaps, axis=0)  # Max to handle occlusions.
     return cmap, hmap
+
+
+def get_fused_heightmap_real(obs, config, bounds, pix_size):
+    """Real robot variant of get_fused_heightmap function"""
+    heightmap, colormap = reconstruct_heightmaps_real(
+    obs['color'], obs['depth'], config, bounds, pix_size)
+    
+    return colormap, heightmap
 
 
 def get_image_transform(theta, trans, pivot=(0, 0)):

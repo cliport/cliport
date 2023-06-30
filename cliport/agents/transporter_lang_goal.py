@@ -8,6 +8,7 @@ from cliport.models.streams.one_stream_transport_lang_fusion import OneStreamTra
 from cliport.models.streams.two_stream_attention_lang_fusion import TwoStreamAttentionLangFusion
 from cliport.models.streams.two_stream_transport_lang_fusion import TwoStreamTransportLangFusion
 from cliport.models.streams.two_stream_attention_lang_fusion import TwoStreamAttentionLangFusionLat
+from cliport.models.streams.two_stream_attention_lang_fusion import TwoStreamAttentionRotationLangFusionLat
 from cliport.models.streams.two_stream_transport_lang_fusion import TwoStreamTransportLangFusionLat
 
 
@@ -18,13 +19,15 @@ class TwoStreamClipLingUNetTransporterAgent(TransporterAgent):
     def _build_model(self):
         stream_one_fcn = 'plain_resnet'
         stream_two_fcn = 'clip_lingunet'
+
         self.attention = TwoStreamAttentionLangFusion(
             stream_fcn=(stream_one_fcn, stream_two_fcn),
             in_shape=self.in_shape,
-            n_rotations=1,
+            n_rotations=self.n_rotations,
             preprocess=utils.preprocess,
             cfg=self.cfg,
             device=self.device_type,
+            clip_model=self.clip_rn50
         )
         self.transport = TwoStreamTransportLangFusion(
             stream_fcn=(stream_one_fcn, stream_two_fcn),
@@ -34,6 +37,7 @@ class TwoStreamClipLingUNetTransporterAgent(TransporterAgent):
             preprocess=utils.preprocess,
             cfg=self.cfg,
             device=self.device_type,
+            clip_model=self.clip_rn50
         )
 
     def attn_forward(self, inp, softmax=True):
@@ -74,17 +78,24 @@ class TwoStreamClipLingUNetTransporterAgent(TransporterAgent):
     def act(self, obs, info, goal=None):  # pylint: disable=unused-argument
         """Run inference and return best action given visual observations."""
         # Get heightmap from RGB-D images.
-        img = self.test_ds.get_image(obs)
+        img = utils.get_image(obs, self.cam_config, self.bounds, self.pix_size)
         lang_goal = info['lang_goal']
 
         # Attention model forward pass.
         pick_inp = {'inp_img': img, 'lang_goal': lang_goal}
         pick_conf = self.attn_forward(pick_inp)
         pick_conf = pick_conf.detach().cpu().numpy()
+        print('Pick max prediction: ', np.max(pick_conf))
         argmax = np.argmax(pick_conf)
         argmax = np.unravel_index(argmax, shape=pick_conf.shape)
         p0_pix = argmax[:2]
-        p0_theta = argmax[2] * (2 * np.pi / pick_conf.shape[2])
+
+        pick_rot_inp = {'inp_img': img, 'lang_goal': lang_goal, 'p0': p0_pix,}
+        pick_rot_conf = self.attn_rot_forward(pick_rot_inp)
+        pick_rot_conf = pick_rot_conf.detach().cpu().numpy()
+        argmax = np.argmax(pick_rot_conf)
+        argmax = np.unravel_index(argmax, shape=pick_rot_conf.shape)
+        p0_theta = argmax[2] * (2 * np.pi / pick_rot_conf.shape[2])
 
         # Transport model forward pass.
         place_inp = {'inp_img': img, 'p0': p0_pix, 'lang_goal': lang_goal}
@@ -151,6 +162,16 @@ class TwoStreamClipLingUNetLatTransporterAgent(TwoStreamClipLingUNetTransporterA
             preprocess=utils.preprocess,
             cfg=self.cfg,
             device=self.device_type,
+            clip_model=self.clip_rn50
+        )
+        self.attention_rot = TwoStreamAttentionRotationLangFusionLat(
+            stream_fcn=(stream_one_fcn, stream_two_fcn),
+            in_shape=self.in_shape,
+            n_rotations=self.n_rotations,
+            preprocess=utils.preprocess,
+            cfg=self.cfg,
+            device=self.device_type,
+            clip_model=self.clip_rn50
         )
         self.transport = TwoStreamTransportLangFusionLat(
             stream_fcn=(stream_one_fcn, stream_two_fcn),
@@ -160,7 +181,25 @@ class TwoStreamClipLingUNetLatTransporterAgent(TwoStreamClipLingUNetTransporterA
             preprocess=utils.preprocess,
             cfg=self.cfg,
             device=self.device_type,
+            clip_model=self.clip_rn50
         )
+    
+    def attn_rot_forward(self, inp, softmax=True):
+        inp_img = inp['inp_img']
+        lang_goal = inp['lang_goal']
+        p0 = inp['p0']
+
+        out = self.attention_rot.forward(inp_img, p0, lang_goal, softmax=softmax)
+        return out
+
+    def attn_rot_training_step(self, frame, backprop=True, compute_err=False):
+        inp_img = frame['img']
+        p0, p0_theta = frame['p0'], frame['p0_theta']
+        lang_goal = frame['lang_goal']
+
+        inp = {'inp_img': inp_img, 'lang_goal': lang_goal, 'p0': p0}
+        out = self.attn_rot_forward(inp, softmax=False)
+        return self.attn_rot_criterion(backprop, compute_err, inp, out, p0, p0_theta)
 
 
 class TwoStreamRN50BertLingUNetTransporterAgent(TwoStreamClipLingUNetTransporterAgent):

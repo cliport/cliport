@@ -93,7 +93,7 @@ class ResNet45_10s(nn.Module):
         )
 
     def forward(self, x):
-        x = self.preprocess(x, dist='transporter')
+        x = self.preprocess(x, dist='franka')
         in_shape = x.shape
 
         # encoder

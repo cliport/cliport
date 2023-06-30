@@ -1,9 +1,11 @@
 """Image dataset."""
 
 import os
+from pathlib import Path
 import pickle
 import warnings
 
+import cv2
 import numpy as np
 from torch.utils.data import Dataset
 
@@ -20,6 +22,306 @@ BOUNDS = np.array([[0.25, 0.75], [-0.5, 0.5], [0, 0.28]])
 TASK_NAMES = (tasks.names).keys()
 TASK_NAMES = sorted(TASK_NAMES)[::-1]
 
+class RealRobotDataset(Dataset):
+    """A simple image dataset class."""
+
+    def __init__(self, path, cfg, n_demos=0, augment=False):
+        """A simple RGB-D image dataset."""
+        self._path = path
+
+        self.cfg = cfg
+        self.sample_set = []
+        self.max_seed = -1
+        self.n_episodes = 0
+        self.images = self.cfg['dataset']['images']
+        self.cache = self.cfg['dataset']['cache']
+        self.n_demos = n_demos
+        self.augment = augment
+
+        self.aug_theta_sigma = self.cfg['dataset']['augment']['theta_sigma'] if 'augment' in self.cfg['dataset'] else 60  # legacy code issue: theta_sigma was newly added
+        self.pix_size = 0.003125
+        self.in_shape = (256, 160, 6)
+        self.cam_config = cameras.D435Franka.CONFIG
+        #self.cam_config = cameras.RealSenseD415.CONFIG
+        self.bounds = np.array([[0.1, 0.6], [-0.4, 0.4], [-0.05, 0.3]])
+
+        # Track existing dataset if it exists.
+        files = list(Path(self._path).rglob("*.pkl"))
+        files.sort()
+        for file in files:
+            seed = int(file.name.split(".")[0])
+            self.n_episodes += 1
+            self.max_seed = max(self.max_seed, seed)
+        
+        self.n_demos = self.n_episodes
+
+        self._cache = {}
+
+        if self.n_demos > 0:
+            self.images = self.cfg['dataset']['images']
+            self.cache = self.cfg['dataset']['cache']
+
+            # Check if there sufficient demos in the dataset
+            if self.n_demos > self.n_episodes:
+                raise Exception(f"Requested training on {self.n_demos} demos, but only {self.n_episodes} demos exist in the dataset path: {self._path}.")
+
+            episodes = np.random.choice(range(self.n_episodes), self.n_demos, False)
+            self.set(episodes)
+
+    def set(self, episodes):
+        """Limit random samples to specific fixed set."""
+        self.sample_set = episodes
+
+    def load(self, episode_id, images=True, cache=False):
+        # Get filename and random seed used to initialize episode.
+        seed = None
+        files = list(Path(self._path).rglob("*.pkl"))
+        files.sort()
+        file = files[episode_id]
+        data = pickle.load(open(file, 'rb'))
+
+        # For now, we don't support tasks having multiple time steps
+        obs = {'color': data['color'], 'depth': data['depth']} if images else {}
+        episode = [(obs, data['action'], 1.0, data['info'])] 
+
+        return episode, seed
+
+    def get_image(self, obs, cam_config=None):
+        """Stack color and height images image."""
+
+        if cam_config is None:
+            cam_config = self.cam_config
+
+        # Get color and height maps from RGB-D images.
+        cmap, hmap = utils.get_fused_heightmap_real(
+            obs, cam_config[0], self.bounds, self.pix_size)
+        img = np.concatenate((cmap,
+                              hmap[Ellipsis, None],
+                              hmap[Ellipsis, None],
+                              hmap[Ellipsis, None]), axis=2)
+        assert img.shape == self.in_shape, img.shape
+        return img
+
+    def process_sample(self, datum, augment=True):
+        # Get training labels from data sample.
+        (obs, act, _, info) = datum
+        img = self.get_image(obs)
+
+        p0, p1 = None, None
+        p0_theta, p1_theta = None, None
+        perturb_params =  None
+
+        if act:
+            p0_xyz, p0_xyzw = act['pose0']
+            p1_xyz, p1_xyzw = act['pose1']
+            p0 = utils.xyz_to_pix(p0_xyz, self.bounds, self.pix_size)
+            p0_theta = -np.float32(utils.quatXYZW_to_eulerXYZ(p0_xyzw)[2])
+            p1 = utils.xyz_to_pix(p1_xyz, self.bounds, self.pix_size)
+            p1_theta = -np.float32(utils.quatXYZW_to_eulerXYZ(p1_xyzw)[2])
+            p1_theta = p1_theta - p0_theta
+
+        # Data augmentation.
+        if augment:
+            img, _, (p0, p1), perturb_params = utils.perturb(img, [p0, p1], theta_sigma=self.aug_theta_sigma)
+
+        sample = {
+            'img': img,
+            'p0': p0, 'p0_theta': p0_theta,
+            'p1': p1, 'p1_theta': p1_theta,
+            'perturb_params': perturb_params
+        }
+        #print(info['pick_data'])
+        #print(p0_xyzw)
+        #cvimg = img[:,:,:3].astype(np.uint8)
+        #dimg = img[..., 3]
+        # dimg = cv2.normalize(dimg, dimg, 1, 0, cv2.NORM_MINMAX)
+        #cvimg = cv2.circle(cvimg, (p0[1], p0[0]), 2, (0, 255, 0), -1)
+        #cvimg = cv2.circle(cvimg, (p1[1], p1[0]), 2, (0, 0, 255), -1)
+        #print(info['lang_goal'])
+        #print(dimg.max(), dimg.min())
+        #print(np.unravel_index(np.argmax(dimg, axis=None), dimg.shape))
+        #cv2.imshow("img", cvimg)
+        #cv2.imshow("dimg", dimg)
+        #cv2.waitKey(0)
+        # Add language goal if available.
+        if 'lang_goal' not in info:
+            warnings.warn("No language goal. Defaulting to 'task completed.'")
+
+        if info and 'lang_goal' in info:
+            sample['lang_goal'] = info['lang_goal']
+        else:
+            sample['lang_goal'] = "task completed."
+
+        return sample
+
+    def __len__(self):
+        return len(self.sample_set)
+
+    def __getitem__(self, idx):
+        # Choose random episode.
+        if len(self.sample_set) > 0:
+            episode_id = np.random.choice(self.sample_set)
+        else:
+            episode_id = np.random.choice(range(self.n_episodes))
+        episode, _ = self.load(episode_id, self.images, self.cache)
+
+        # Return random observation action pair from episode.
+        sample = episode[0]
+
+        # Process sample.
+        sample = self.process_sample(sample, augment=self.augment)
+        goal = None
+
+        return sample, goal
+
+
+class RealRobotMultiDataset(Dataset):
+    """A simple multi image dataset class."""
+
+    def __init__(self, path, cfg, n_demos=0, augment=False):
+        """A simple RGB-D image dataset."""
+        self._path = path
+
+        self.cfg = cfg
+        self.sample_set = []
+        self.max_seed = -1
+        self.n_episodes = 0
+        self.images = self.cfg['dataset']['images']
+        self.cache = self.cfg['dataset']['cache']
+        self.n_demos = n_demos
+        self.augment = augment
+
+        self.aug_theta_sigma = self.cfg['dataset']['augment']['theta_sigma'] if 'augment' in self.cfg['dataset'] else 60  # legacy code issue: theta_sigma was newly added
+        self.pix_size = 0.003125
+        self.in_shape = (256, 160, 6)
+        self.cam_config = cameras.D435Franka.CONFIG
+        self.bounds = np.array([[0.1, 0.6], [-0.4, 0.4], [-0.05, 0.3]])
+
+        # Track existing dataset if it exists.
+        files = list(Path(self._path).rglob("*.pkl"))
+        files.sort()
+        for file in files:
+            seed = int(file.name.split(".")[0])
+            self.n_episodes += 1
+            self.max_seed = max(self.max_seed, seed)
+        
+        self.n_demos = self.n_episodes
+
+        self._cache = {}
+
+        if self.n_demos > 0:
+            self.images = self.cfg['dataset']['images']
+            self.cache = self.cfg['dataset']['cache']
+
+            # Check if there sufficient demos in the dataset
+            if self.n_demos > self.n_episodes:
+                raise Exception(f"Requested training on {self.n_demos} demos, but only {self.n_episodes} demos exist in the dataset path: {self._path}.")
+
+            episodes = np.random.choice(range(self.n_episodes), self.n_demos, False)
+            self.set(episodes)
+
+    def set(self, episodes):
+        """Limit random samples to specific fixed set."""
+        self.sample_set = episodes
+
+    def load(self, episode_id, images=True, cache=False):
+        # Get filename and random seed used to initialize episode.
+        seed = None
+        files = list(Path(self._path).rglob("*.pkl"))
+        files.sort()
+        file = files[episode_id]
+        data = pickle.load(open(file, 'rb'))
+
+        # For now, we don't support tasks having multiple time steps
+        obs = {'color': data['color'], 'depth': data['depth']} if images else {}
+        episode = [(obs, data['action'], 1.0, data['info'])] 
+
+        return episode, seed
+    
+    def get_image(self, obs, cam_config=None):
+        """Stack color and height images image."""
+
+        if cam_config is None:
+            cam_config = self.cam_config
+
+        # Get color and height maps from RGB-D images.
+        cmap, hmap = utils.get_fused_heightmap_real(
+            obs, cam_config[0], self.bounds, self.pix_size)
+        img = np.concatenate((cmap,
+                              hmap[Ellipsis, None],
+                              hmap[Ellipsis, None],
+                              hmap[Ellipsis, None]), axis=2)
+        assert img.shape == self.in_shape, img.shape
+        return img
+
+    def process_sample(self, datum, augment=True):
+        # Get training labels from data sample.
+        (obs, act, _, info) = datum
+        img = self.get_image(obs)
+
+        perturb_params =  None
+
+        # add values to sample in the same order as in single real dataset
+        sample = {'img': img}
+        p_list = []
+        if act:
+            for i in range(len(act)):
+                p_xyz, p_xyzw = act[f'pose{i}']
+                sample[f'p{i}'] = utils.xyz_to_pix(p_xyz, self.bounds, self.pix_size)
+                p_list.append(sample[f'p{i}'])
+                sample[f'p{i}_theta'] = -np.float32(utils.quatXYZW_to_eulerXYZ(p_xyzw)[2])
+                if i % 2 != 0:
+                    # theta should be like this for every pick & place pair (?)
+                    sample[f'p{i}_theta'] = sample[f'p{i}_theta'] - sample[f'p{i-1}_theta']
+
+        # Data augmentation
+        if augment:
+            img, _, p_list, perturb_params = utils.perturb(img, p_list, theta_sigma=self.aug_theta_sigma)
+        sample['perturb_params'] = perturb_params
+
+        #print(info['pick_data'])
+        #print(p0_xyzw)
+        #cvimg = img[:,:,:3].astype(np.uint8)
+        #dimg = img[..., 3]
+        # dimg = cv2.normalize(dimg, dimg, 1, 0, cv2.NORM_MINMAX)
+        #cvimg = cv2.circle(cvimg, (p0[1], p0[0]), 2, (0, 255, 0), -1)
+        #cvimg = cv2.circle(cvimg, (p1[1], p1[0]), 2, (0, 0, 255), -1)
+        #print(info['lang_goal'])
+        #print(dimg.max(), dimg.min())
+        #print(np.unravel_index(np.argmax(dimg, axis=None), dimg.shape))
+        #cv2.imshow("img", cvimg)
+        #cv2.imshow("dimg", dimg)
+        #cv2.waitKey(0)
+        # Add language goal if available.
+        if 'lang_goal' not in info:
+            warnings.warn("No language goal. Defaulting to 'task completed.'")
+
+        if info and 'lang_goal' in info:
+            sample['lang_goal'] = info['lang_goal']
+        else:
+            sample['lang_goal'] = "task completed."
+
+        return sample
+
+    def __len__(self):
+        return len(self.sample_set)
+
+    def __getitem__(self, idx):
+        # Choose random episode.
+        if len(self.sample_set) > 0:
+            episode_id = np.random.choice(self.sample_set)
+        else:
+            episode_id = np.random.choice(range(self.n_episodes))
+        episode, _ = self.load(episode_id, self.images, self.cache)
+
+        # Return random observation action pair from episode.
+        sample = episode[0]
+
+        # Process sample.
+        sample = self.process_sample(sample, augment=self.augment)
+        goal = None
+
+        return sample, goal
 
 class RavensDataset(Dataset):
     """A simple image dataset class."""
@@ -195,6 +497,17 @@ class RavensDataset(Dataset):
             'p1': p1, 'p1_theta': p1_theta,
             'perturb_params': perturb_params
         }
+
+        #cvimg = img[:,:,:3].astype(np.uint8)
+        #dimg = img[..., 3]
+        #dimg = cv2.normalize(dimg, dimg, 1, 0, cv2.NORM_MINMAX)
+        #cvimg = cv2.circle(cvimg, (p0[1], p0[0]), 2, (0, 255, 0), -1)
+        #cvimg = cv2.circle(cvimg, (p1[1], p1[0]), 2, (0, 0, 255), -1)
+        #print(info['lang_goal'])
+        # print(dimg.max(), dimg.min())
+        #cv2.imshow("img", cvimg)
+        #cv2.imshow("dimg", dimg)
+        #cv2.waitKey(0)
 
         # Add language goal if available.
         if 'lang_goal' not in info:
