@@ -1,0 +1,37 @@
+# Extraction
+
+defaults:
+  - config
+
+hydra:
+  run:
+    dir: ${root_dir}/temp_hydra
+
+dataset:
+  type: 'real'
+  images: True
+  cache: True # load episodes to memory instead of reading from disk
+  augment:
+    theta_sigma: 60 # rotation sigma in degrees; N(mu = 0, sigma = theta_sigma).
+
+extraction:
+  # folders
+  result_folder: ${root_dir}/comparison_results
+  data_folder: ${root_dir}/data
+  exp_folder: ${root_dir}/exps
+
+  # config
+  task: packing-objects
+  agent: two_stream_full_clip_lingunet_lat_transporter
+  n_steps: 10
+
+  # hyper params
+  n_rotations: 36
+
+  attn_stream_fusion_type: 'add'
+  trans_stream_fusion_type: 'conv'
+  lang_fusion_type: 'mult'
+
+  # script configs
+  gpu: [0]
+  log: False

@@ -119,6 +119,9 @@ class TwoStreamClipLingUNetTransporterAgent(TransporterAgent):
             'pose1': (np.asarray(p1_xyz), np.asarray(p1_xyzw)),
             'pick': [p0_pix[0], p0_pix[1], p0_theta],
             'place': [p1_pix[0], p1_pix[1], p1_theta],
+            'hmap': hmap,
+            'pick_confidence': pick_conf,
+            'place_confidence': place_conf,
         }
 
 

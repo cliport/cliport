@@ -15,6 +15,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
+
 def depth_to_heatmap(depth) -> None:
     """Normalize depth image to color heatmap for display"""
     valid = (depth != 0)

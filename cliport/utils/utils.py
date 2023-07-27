@@ -636,12 +636,18 @@ class ImageRotator:
             # define the scale factor
             scale: torch.tensor = torch.ones(1, 2)
 
-            # compute the transformation matrix
-            M: torch.tensor = kornia.get_rotation_matrix2d(center, angle, scale)
-
+            # compute the transformation matrix. Function might have moved in newer versions
+            try:
+                M: torch.tensor = kornia.get_rotation_matrix2d(center, angle, scale)
+            except AttributeError:
+                M: torch.tensor = kornia.geometry.transform.get_rotation_matrix2d(center, angle, scale)
+            
             # apply the transformation to original image
             _, _, h, w = x.shape
-            x_warped: torch.tensor = kornia.warp_affine(x.float(), M.to(x.device), dsize=(h, w))
+            try:
+                x_warped: torch.tensor = kornia.warp_affine(x.float(), M.to(x.device), dsize=(h, w))
+            except AttributeError:
+                x_warped: torch.tensor = kornia.geometry.transform.warp_affine(x.float(), M.to(x.device), dsize=(h, w))
             x_warped = x_warped
             rot_x_list.append(x_warped)
 
