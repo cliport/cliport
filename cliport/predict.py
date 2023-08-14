@@ -125,7 +125,7 @@ def main_loop():
         pick_rot_conf = pick_rot_conf.detach().cpu().numpy()
         argmax = np.argmax(pick_rot_conf)
         argmax = np.unravel_index(argmax, shape=pick_rot_conf.shape)
-        p0_theta = argmax[2] * (2 * np.pi / pick_rot_conf.shape[2]) * -1.0
+        p0_theta = argmax
 
         line_len = 30
         pick0 = (pick[0] + line_len / 2.0 * np.sin(p0_theta), pick[1] + line_len / 2.0 * np.cos(p0_theta))
