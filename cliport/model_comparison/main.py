@@ -2,7 +2,7 @@ import hydra
 import os
 from omegaconf import DictConfig, OmegaConf
 
-from cliport.model_comparison.comparison_utilities import DataHandler, DataProcessor
+from cliport.model_comparison.comparison_utilities import DataHandler, DataProcessor, DataDrawer
 
 
 ROOT_DIR = "/home/drubuntu/cliport"
@@ -70,6 +70,8 @@ def main() -> int:
     )
     data_processor = DataProcessor()
 
+    data_drawer = DataDrawer()
+    
     all_data_dict = {}
 
     subdict = {}
@@ -79,14 +81,17 @@ def main() -> int:
         size = training_size if SET == "train" else validation_size
 
         for index in range(size):
-            subdict[index] = calculate_values(data_extractor, data_processor, size, index)
+            subdict[index] = calculate_values(data_extractor, data_processor, data_drawer, size, index)
+            
+            episode = data_extractor.get_observation(index, SET)
+            (obs, act_actual, _, info) = episode
+            data_drawer.draw_im_data(obs['color'])
 
         subdict["lang_goals"] = lang_goals
         all_data_dict[f"{MODELS[i]}{MODEL_EXTENDERS[i]}"] = subdict
 
         # clear models & agent from memory
         data_extractor.clear_model_data()
-
 
     if CALCULATE_BOX_VALUES:
         # collapse dict so tasks are not present in multiples but as statistical values
@@ -129,8 +134,8 @@ def read_model(data_extractor: DataHandler, index: int):
     return validation_size, training_size, lang_goals
 
 
-def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor, size: int, index: int):
-    print(f"Example {index+1}/{size}")
+def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor, data_drawer: DataDrawer, size: int, index: int):
+    print(f"Task {index+1}/{size}")
     episode = data_extractor.get_observation(index, SET)
     (obs, act_actual, _, info) = episode
     # goal is pulled from info if not specified
@@ -156,8 +161,20 @@ def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor,
     place_conf, place_rot_pred_conf, place_logits = rom(episode, SET, "place")
 
     frp = data_processor.find_rot_peak
-    pick_rot_pred = frp(pick_rot_pred_conf)
-    place_rot_pred = frp(place_rot_pred_conf)
+    pick_rot_prediction = frp(pick_rot_pred_conf)
+    place_rot_prediction = frp(place_rot_pred_conf)
+
+    # send values to plotter
+    data_drawer.set_action_values(
+        pick_prediction, 
+        pick_actual, 
+        place_prediction, 
+        place_actual, 
+        pick_rot_prediction, 
+        pick_rot_actual, 
+        place_rot_prediction, 
+        place_rot_actual
+        )
 
     # calculate errors
     cpd = data_processor.calculate_pythagorean_distance
@@ -165,8 +182,8 @@ def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor,
     place_dist_err_collection = cpd(place_actual, place_prediction)
 
     cad = data_processor.calculate_angular_distance
-    pick_rot_err = cad(pick_rot_actual, pick_rot_pred)
-    place_rot_err = cad(place_rot_actual, place_rot_pred)
+    pick_rot_err = cad(pick_rot_actual, pick_rot_prediction)
+    place_rot_err = cad(place_rot_actual, place_rot_prediction)
 
     travel_errors = data_processor.calculate_travel_error(
         pick_actual, place_actual, pick_prediction, place_prediction

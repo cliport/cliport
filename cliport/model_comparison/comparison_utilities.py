@@ -16,6 +16,9 @@ from cliport.dataset import RealRobotDataset
 from cliport.utils import utils as master_utils
 
 
+from cliport.view_save_data import RigidTransformer
+
+
 class DataHandler:
     """Data reading utilities for model comparison
 
@@ -63,7 +66,6 @@ class DataHandler:
 
         # common hydra cfg
         self.cfg = master_utils.load_hydra_config("cliport/cfg/extraction.yaml")
-
 
     def read_dataset(self, model_name: str, target: str) -> None:
         """Reads specified validation / training dataset (RealRobotDataset) to appropriate class memory. Note: DataExtractor.data_path/model_name-target must already exist.
@@ -361,21 +363,21 @@ class DataHandler:
         elif mode == "val":
             return self.validation_dataset.process_sample(episode)
         return None
-    
+
     def get_images_from_episode(self, batch):
         batch = self.get_batch(mode, episode)
 
-        img = torch.from_numpy(batch['img'])
+        img = torch.from_numpy(batch["img"])
         color = np.uint8(img.detach().cpu().numpy())[:, :, :3]
         color = color.transpose(1, 0, 2)
         depth = np.array(img.detach().cpu().numpy())[:, :, 3]
         depth = depth.transpose(1, 0)
-        
+
         return color, depth
-    
 
     def get_points_from_episode(self, batch):
         batch = self.get_batch
+
 
 class DataProcessor:
     """Utilities for processing extracted data for model comparison
@@ -428,15 +430,21 @@ class DataProcessor:
         return target_angle - predicted_angle
 
     @staticmethod
-    def convert_dict_to_csv(dict_to_convert: dict, order: list[str], do_box_labels: bool=False) -> str:
+    def convert_dict_to_csv(
+        dict_to_convert: dict, order: list[str], do_box_labels: bool = False
+    ) -> str:
         task_names = list(dict_to_convert.keys())
         if do_box_labels:
             csv_text = ","
             for task_name in task_names:
-                csv_text += f"{task_name},minimum,first quartile,median,third quartile,maximum,"
+                csv_text += (
+                    f"{task_name},minimum,first quartile,median,third quartile,maximum,"
+                )
         else:
             csv_text = ",,"
-            delim_count = np.shape(dict_to_convert[task_names[0]])[0]   # width of datapoints, assume shape
+            delim_count = np.shape(dict_to_convert[task_names[0]])[
+                0
+            ]  # width of datapoints, assume shape
             for task_name in task_names:
                 # first line containing error legends
                 csv_text += f"{task_name}," + "," * (delim_count - 1)
@@ -448,7 +456,7 @@ class DataProcessor:
             height, width = np.shape(dict_to_convert[task_name])
             while i < width:
                 k = 0
-                error_title = order[0][i] 
+                error_title = order[0][i]
                 while k < height:
                     error = dict_to_convert[task_name][k][i]
                     if error_title not in row_entries:
@@ -473,7 +481,9 @@ class DataProcessor:
             csv_text += "\n"
         return csv_text
 
-    def collapse_results_to_meta_results(self, all_data_dict: dict, use_broken_goals: bool, placeholder_value: float) -> (dict, list):
+    def collapse_results_to_meta_results(
+        self, all_data_dict: dict, use_broken_goals: bool, placeholder_value: float
+    ) -> (dict, list):
         # TODO: finish this
         # seems to not stash all error data.
         result_dict = {}
@@ -531,17 +541,19 @@ class DataProcessor:
                         median_goal_data,
                         third_quartile_goal_data,
                         maximum_goal_data,
-                        ]
+                    ]
                     # order_stash.append(average_order)
                     order_stash.append(box_order)
-                    
+
                     if model_name not in result_dict:
                         result_dict[model_name] = {lang_goal: boxed_goal_data}
                     else:
                         result_dict[model_name][lang_goal] = boxed_goal_data
         return result_dict, order_stash
 
-    def collapse_results_to_results(self, all_data_dict: dict, placeholder_value: float) -> (dict, list):
+    def collapse_results_to_results(
+        self, all_data_dict: dict, placeholder_value: float
+    ) -> (dict, list):
         result_dict = {}
         all_lang_goals = {}
 
@@ -575,7 +587,7 @@ class DataProcessor:
 
                 all_goal_data, all_order = self.append_all_errors(current_goal_data)
                 order_stash.append(all_order)
-                
+
                 if model_name not in result_dict:
                     result_dict[model_name] = {lang_goal: all_goal_data}
                 else:
@@ -591,7 +603,7 @@ class DataProcessor:
         ]
 
     @staticmethod
-    def create_empty_task(value: float=0) -> list:
+    def create_empty_task(value: float = 0) -> list:
         # TODO: -1 values should be #N/A in csv in order to not pollute real data. Breaks :func:`DataProcessor.calculate_average_of_errors`
         return [
             {
@@ -636,7 +648,7 @@ class DataProcessor:
         for error_key in error_keys:
             order.append(error_key)
             values = [item[error_key] for item in dict_list]
-            
+
             minimum.append(min(values))
             maximum.append(max(values))
             median.append(np.median(values))
@@ -654,7 +666,7 @@ class DataProcessor:
             order.append(error_key)
             values = [item[error_key] for item in dict_list]
             all_data.append(values)
-            
+
         return all_data, order
 
     @staticmethod
@@ -672,7 +684,7 @@ class DataProcessor:
         argmax = np.argmax(rot_conf)
         argmax = np.unravel_index(argmax, shape=rot_conf.shape)
         return argmax
-    
+
     @staticmethod
     def extract_point_from_pred(conf):
         argmax = np.argmax(pick_conf)
@@ -683,16 +695,10 @@ class DataDrawer:
     # Utilities for comparing data values
     # TODO: define required functionality
 
-    def __init__(self, mode: str, type: str) -> None:
-        self.mode = mode
-        self.type = type
-        self.fig = plt.figure()
-        self.axs = self.fig.gca()
-
-    def init_subplots(self, n_rows, n_cols):
+    def __init__(self) -> None:
         self.fig, self.axs = plt.subplots(
-            nrows=n_rows,
-            ncols=n_cols,
+            nrows=1,
+            ncols=1,
             sharex=False,
             sharey=False,
             squeeze=True,
@@ -701,9 +707,79 @@ class DataDrawer:
             subplot_kw=None,
             gridspec_kw=None,
         )
+        self.init = True
+        plt.ion()
+        self.fig.suptitle("prediction cast pick/place (blue/cyan) vs. actual (red/pink)")
+        self.axs.axes.xaxis.set_visible(False)
+        self.axs.axes.yaxis.set_visible(False)
 
-    def set_axis_im_data(self, r, c, im_data, title):
-        self.axs[r, c].imshow(im_data)
-        self.axs[r, c].axes.xaxis.set_visible(False)
-        self.axs[r, c].axes.yaxis.set_visible(False)
-        self.axs[r, c].set_title(title)
+        # action values
+        self.pick_predict = None
+        self.pick_actual = None
+        self.place_predict = None
+        self.place_actual = None
+        self.pick_rot_predict = None
+        self.pick_rot_actual = None
+        self.place_rot_actual = None
+        self.place_rot_predict = None
+
+        self.rigid_transformer = RigidTransformer()
+
+    def set_action_values(
+        self,
+        pick_pred,
+        pick_act,
+        place_pred,
+        place_act,
+        pick_rot_pred,
+        pick_rot_act,
+        place_rot_pred,
+        place_rot_act,
+    ):
+        self.pick_predict = pick_pred
+        self.pick_actual = pick_act
+        self.place_predict = place_pred
+        self.place_actual = place_act
+        self.pick_rot_predict = pick_rot_pred
+        self.pick_rot_actual = pick_rot_act
+        self.place_rot_predict = place_rot_pred
+        self.place_rot_actual = place_rot_act
+
+    def draw_im_data(self, im_data):
+        self.axs.cla()
+        if self.init:
+            plt.sca(self.axs)
+        self.axs.imshow(im_data, animated=True)
+        self.fig.canvas.draw()
+        
+        x_pick_pred, y_pick_pred = self.rigid_transformer.xyz_to_pix(self.pick_predict[0])
+        x_pick_act, y_pick_act = self.rigid_transformer.xyz_to_pix(self.pick_actual[0])
+        x_place_pred, y_place_pred = self.rigid_transformer.xyz_to_pix(self.place_predict[0])
+        x_place_act, y_place_act = self.rigid_transformer.xyz_to_pix(self.place_actual[0])
+
+        self.axs.plot(x_pick_pred, y_pick_pred, marker="o", markeredgecolor="red", markerfacecolor="red")
+        self.axs.plot(x_pick_act, y_pick_act, marker="o", markeredgecolor="blue", markerfacecolor="blue")
+        self.axs.plot(x_place_pred, y_place_pred, marker="o", markeredgecolor="pink", markerfacecolor="pink")
+        self.axs.plot(x_place_act, y_place_act, marker="o", markeredgecolor="cyan", markerfacecolor="cyan")
+
+        self.draw_grasp_lines([x_pick_pred, y_pick_pred], self.pick_rot_predict, "red")
+        self.draw_grasp_lines([x_pick_act, y_pick_act], self.pick_rot_actual, "blue")
+        self.draw_grasp_lines([x_place_pred, y_place_pred], self.place_rot_predict, "pink")
+        self.draw_grasp_lines([x_place_act, y_place_act], self.place_rot_actual, "cyan")
+
+        plt.pause(0.02)
+        self.fig.canvas.flush_events()
+
+    def draw_grasp_lines(self, position, theta, plot_color):
+        line_len = 100
+        pick0 = (
+            position[0] + line_len / 2.0 * np.sin(theta),
+            position[1] + line_len / 2.0 * np.cos(theta),
+        )
+        pick1 = (
+            position[0] - line_len / 2.0 * np.sin(theta),
+            position[1] - line_len / 2.0 * np.cos(theta),
+        )
+        self.axs.plot(
+            (pick1[0], pick0[0]), (pick1[1], pick0[1]), color=plot_color, linewidth=1
+        )
