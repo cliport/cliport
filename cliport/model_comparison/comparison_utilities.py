@@ -14,9 +14,10 @@ from cliport import agents
 from cliport.dataset import RealRobotDataset
 
 from cliport.utils import utils as master_utils
+from cliport.utils import utils_2 as master_utils_2
 
-
-from cliport.view_save_data import RigidTransformer
+from cliport.ros_server import RigidTransformer, get_bbox
+from typing import List, Tuple, Dict, Any
 
 
 class DataHandler:
@@ -68,7 +69,8 @@ class DataHandler:
         self.cfg = master_utils.load_hydra_config("cliport/cfg/extraction.yaml")
 
     def read_dataset(self, model_name: str, target: str) -> None:
-        """Reads specified validation / training dataset (RealRobotDataset) to appropriate class memory. Note: DataExtractor.data_path/model_name-target must already exist.
+        """Reads specified validation / training dataset (RealRobotDataset) to appropriate class memory.
+        Note: DataExtractor.data_path/model_name-target must already exist.
 
         Args:
             model_name (str): Part of model name common to the torch model & curated dataset.
@@ -97,7 +99,8 @@ class DataHandler:
         self.validation_count = validation_count
 
     def extract_target_rot(self, index: int, mode: str, location: str) -> float:
-        """Extracts rotation targets from dataset. Due to the nature of RealRobotDataset, this must be done separately from reading the main dataset in :func:`DataExtractor.read_dataset`.
+        """Extracts rotation targets from dataset. Due to the nature of RealRobotDataset, this must be done
+        separately from reading the main dataset in :func:`DataExtractor.read_dataset`.
 
         Args:
             index (int): index of data entry to extract rotation target from.
@@ -117,7 +120,7 @@ class DataHandler:
             locator = "p1_theta"
         else:
             # TODO: there can be more positions in multitasks.
-            raise NotImplementedError(f"Unkown task position: {location}")
+            raise NotImplementedError(f"Unknown task position: {location}")
 
         if mode == "train":
             return self.training_dataset[index][0][locator]
@@ -167,6 +170,7 @@ class DataHandler:
             else:
                 # latest (no best)
                 latest = candidates[0]
+            self.checkpoint_title = latest
         except FileNotFoundError as e:
             print(
                 f"File not found ({e}). \
@@ -175,12 +179,10 @@ class DataHandler:
         except IndexError:
             print("Indexing error in finding latest best (or latest)")
 
-        self.checkpoint_title = latest
-
     def act_on_model(
-        self, obs: dict[str, np.array], info: dict, goal: str = None
+        self, obs: Dict[str, np.array], info: dict, goal: str = None
     ) -> dict:
-        """Commands model to act. Model must be loaded to memory by :func:`DataHandler.load_model` before executing this.
+        """Commands model to act. Model must be loaded to memory by :func:`DataHandler.load_model` before executing this
         Args:
             obs (dict[str, np.array]): image (observation) data
             info (dict): task metadata, such as lang_goal
@@ -195,11 +197,13 @@ class DataHandler:
 
     def rot_on_model(
         self, episode: tuple, mode: str, location: str
-    ) -> list[np.ndarray]:
-        """Commands model to do a rotation prediction. Model must be loaded to memory by :func:`DataHandler.load_model` before executing this.
+    ) -> Tuple[Any, Any, Any]:
+        """Commands model to do a rotation prediction. Model must be loaded to memory by
+        :func:`DataHandler.load_model` before executing this.
 
         Args:
-            episode (tuple): Action data for datapoint. Contains all relevant data such as image color data, pick & place positions, rotation data, and lang_goal.
+            episode (tuple): Action data for datapoint. Contains all relevant data such as image color data,
+                pick & place positions, rotation data, and lang_goal.
             mode (str): either 'train' or 'val', depending on which dataset should be used in the rotation process.
             location (str): either 'pick' or 'place' depending on which position the action is done on.
 
@@ -242,7 +246,8 @@ class DataHandler:
         self.act = None
 
     def augment_cfg(self, model_name: str, extender: str) -> None:
-        """Adds in entries from train.yaml missing in export.yaml. This is done programmatically to gurantee right form for the dict.
+        """Adds in entries from train.yaml missing in export.yaml. This is done programmatically to gurantee right
+        form for the dict.
 
         Args:
             model_name (str): Part of model name common to the torch model & curated dataset.
@@ -271,7 +276,7 @@ class DataHandler:
         }
         self.cfg["train"] = entry
 
-    def get_set_limit(self, model: str, mode: str) -> None:
+    def get_set_limit(self, model: str, mode: str) -> int:
         """Function for getting the size of validation or training datasets (read from disk, not extender of model)
 
         Args:
@@ -287,20 +292,21 @@ class DataHandler:
 
         try:
             count = len(os.listdir(f"{self.data_path}/{model}-{mode}"))
+
+            if mode == "train":
+                self.train_count = count
+            elif mode == "val":
+                self.validation_count = count
+            else:
+                raise NotImplementedError(f"Uknown data mode {mode}")
+
+            return count
+
         except FileNotFoundError:
             print("Failed fetching training examples. Path doesn't exist")
 
-        if mode == "train":
-            self.train_count = count
-        elif mode == "val":
-            self.validation_count = count
-        else:
-            raise NotImplementedError(f"Uknown data mode {mode}")
-
-        return count
-
-    def get_lang_goals(self, model: str) -> dict[str, int]:
-        """Function for getting all lang goals from the model dataset (from train & val). Useful for finding potential typos.
+    def get_lang_goals(self, model: str) -> Dict[str, int]:
+        """Function for getting all lang goals from the model dataset (from train & val). Useful for finding typos.
 
         Args:
             model (str): Part of model name common to the torch model & curated dataset.
@@ -309,7 +315,7 @@ class DataHandler:
             list[str]: dict with keys being all unique lang_goals of the model & values their integer count
         """
 
-        # note: using self in subfunctions might be bad practice, especially when manipulating self.
+        # note: using self in sub-functions might be bad practice, especially when manipulating outer context.
         def read_pkls(model, extender):
             pkls = os.listdir(f"{self.data_path}/{model}-{extender}")
             for pkl in pkls:
@@ -325,22 +331,22 @@ class DataHandler:
         read_pkls(model, "val")
         return self.lang_goals
 
-    def get_observation(self, index: int, mode: str) -> tuple[dict, dict]:
+    def get_observation(self, index: int, mode: str) -> Tuple[dict, dict]:
         """Shell for reading an episode from the specified dataset.
 
         Args:
             index (int): index of the episode in the dataset (same as the number in the filename)
             mode (str): Either 'train' or 'val' depending on which set is being read.
 
-        Returns:
-            tuple: Action data for datapoint. Contains all relevant data such as image color data, pick & place positions, rotation data, and lang_goal.
+        Returns: tuple: Action data for datapoint. Contains all relevant data such as image color data, pick & place
+        positions, rotation data, and lang_goal.
         """
         if mode == "train":
             episode = self.training_dataset.load(index, True, False)[0][0]
         elif mode == "val":
             episode = self.validation_dataset.load(index, True, False)[0][0]
         else:
-            return None
+            return {}, {}
         return episode
 
     def write_csv_to_disk(self, csv_text, filename: str) -> None:
@@ -364,7 +370,7 @@ class DataHandler:
             return self.validation_dataset.process_sample(episode)
         return None
 
-    def get_images_from_episode(self, batch):
+    def get_images_from_episode(self, mode, episode):
         batch = self.get_batch(mode, episode)
 
         img = torch.from_numpy(batch["img"])
@@ -387,11 +393,12 @@ class DataProcessor:
     """
 
     def __init__(self) -> None:
-        """Initialization function for DataProcessor. Class containts no memory of state & most functions are staticmethods. Some functions call other class functions."""
+        """Initialization function for DataProcessor. Class contains no memory of state & most functions are
+        static methods. Some functions call other class functions."""
         pass
 
     @staticmethod
-    def find_rot_peak(prediction_data: list) -> float:
+    def find_rot_peak(prediction_data: np.array) -> float:
         argmax = np.argmax(prediction_data)
         location = np.unravel_index(argmax, shape=prediction_data.shape)
         return location[2] * (2 * np.pi / prediction_data.shape[2]) * -1.0
@@ -404,8 +411,8 @@ class DataProcessor:
 
     @staticmethod
     def calculate_pythagorean_distance(
-        target_pos: list[list[float]], predicted_pos: list[list[float]]
-    ) -> list[float]:
+        target_pos: List[List[float]], predicted_pos: List[List[float]]
+    ) -> List[float]:
         xd = target_pos[0][0] - predicted_pos[0][0]
         yd = target_pos[0][1] - predicted_pos[0][1]
         zd = target_pos[0][2] - predicted_pos[0][2]
@@ -431,7 +438,7 @@ class DataProcessor:
 
     @staticmethod
     def convert_dict_to_csv(
-        dict_to_convert: dict, order: list[str], do_box_labels: bool = False
+        dict_to_convert: dict, order: List[str], do_box_labels: bool = False
     ) -> str:
         task_names = list(dict_to_convert.keys())
         if do_box_labels:
@@ -444,7 +451,7 @@ class DataProcessor:
             csv_text = ",,"
             delim_count = np.shape(dict_to_convert[task_names[0]])[
                 0
-            ]  # width of datapoints, assume shape
+            ]  # width of data-points, assume shape
             for task_name in task_names:
                 # first line containing error legends
                 csv_text += f"{task_name}," + "," * (delim_count - 1)
@@ -595,7 +602,7 @@ class DataProcessor:
         return result_dict, order_stash
 
     @staticmethod
-    def find_same_tasks(data_dict: dict, lang_goal) -> dict:
+    def find_same_tasks(data_dict: dict, lang_goal) -> list:
         return [
             data_dict[entry][0]
             for entry in data_dict
@@ -604,7 +611,8 @@ class DataProcessor:
 
     @staticmethod
     def create_empty_task(value: float = 0) -> list:
-        # TODO: -1 values should be #N/A in csv in order to not pollute real data. Breaks :func:`DataProcessor.calculate_average_of_errors`
+        # TODO: -1 values should be #N/A in csv in order to not pollute real data.
+        #  Breaks :func:`DataProcessor.calculate_average_of_errors`
         return [
             {
                 "pick_x_error": value,
@@ -624,7 +632,7 @@ class DataProcessor:
         ]
 
     @staticmethod
-    def calculate_average_of_errors(dict_list: list[dict]):
+    def calculate_average_of_errors(dict_list: List[dict]):
         error_keys = list(dict_list[0].keys())
         result = []
         order = []
@@ -634,7 +642,7 @@ class DataProcessor:
         return result, order
 
     @staticmethod
-    def calculate_box_values_of_errors(dict_list: list[dict]):
+    def calculate_box_values_of_errors(dict_list: List[dict]):
         error_keys = list(dict_list[0].keys())
         order = []
         minimum = []
@@ -643,8 +651,9 @@ class DataProcessor:
         first_quartile = []
         third_quartile = []
 
-        # across every model (dict list item), get values with error_key (x_error etc.) & find box values.
-        # since this could be random, create an "order" list as well (current main checks only the first value in convert_dict_to_csv)
+        # across every model (dict list item), get values with error_key (x_error etc.) & find box values. Since this
+        # could be random, create an "order" list as well (current main checks only the first value in
+        # convert_dict_to_csv)
         for error_key in error_keys:
             order.append(error_key)
             values = [item[error_key] for item in dict_list]
@@ -658,7 +667,7 @@ class DataProcessor:
         return minimum, maximum, median, first_quartile, third_quartile, order
 
     @staticmethod
-    def append_all_errors(dict_list: list[dict]):
+    def append_all_errors(dict_list: List[dict]):
         error_keys = list(dict_list[0].keys())
         order = []
         all_data = []
@@ -699,8 +708,6 @@ class DataDrawer:
         self.fig, self.axs = plt.subplots(
             nrows=1,
             ncols=1,
-            sharex=False,
-            sharey=False,
             squeeze=True,
             width_ratios=None,
             height_ratios=None,
@@ -745,13 +752,16 @@ class DataDrawer:
         self.place_rot_predict = place_rot_pred
         self.place_rot_actual = place_rot_act
 
-    def draw_im_data(self, im_data):
+    def draw_im_data(self, obs):
+        im_data = obs['color']
+        depth = obs['depth']
+        
         self.axs.cla()
         if self.init:
             plt.sca(self.axs)
         self.axs.imshow(im_data, animated=True)
         self.fig.canvas.draw()
-        
+
         x_pick_pred, y_pick_pred = self.rigid_transformer.xyz_to_pix(self.pick_predict[0])
         x_pick_act, y_pick_act = self.rigid_transformer.xyz_to_pix(self.pick_actual[0])
         x_place_pred, y_place_pred = self.rigid_transformer.xyz_to_pix(self.place_predict[0])

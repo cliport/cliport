@@ -166,7 +166,7 @@ class CLIPORT:
     def __init__(self):
         """Init agent"""
         agent_type = 'two_stream_clip_lingunet_lat_transporter'
-        model_folder = 'exps/engine-parts-single-list-cliport-n88-train/checkpoints'
+        model_folder = 'exps/engine-parts-to-box-single-list-cliport-n88-train/checkpoints'
         ckpt_name = 'best.ckpt'  # name of checkpoint to load
         eval_task = 'packing-objects'
         root_dir = os.environ['CLIPORT_ROOT']
@@ -213,7 +213,7 @@ class CLIPORT:
         rospy.loginfo(act)
         self.pick = act['pose0']
         self.place = act['pose1']
-        self.hmap = act['height_map']
+        self.hmap = act['hmap']
         self.pick_confidence = act['pick_confidence']
         self.place_confidence = act['place_confidence']
 
@@ -276,7 +276,7 @@ def main() -> None:
                 """
                 pick = rt.xyz_to_pix(cliport.act['pose0'][0])  # width,height order of pixels
                 place = rt.xyz_to_pix(cliport.act['pose1'][0])
-                streamer.set_hmap(cliport.act['height_map'])
+                streamer.set_hmap(cliport.act['hmap'])
                 streamer.set_confidences(cliport.act['pick_confidence'], cliport.act['place_confidence'])
 
                 cfg = cliport.agent.cam_config[0]

@@ -3,17 +3,15 @@ import os
 from omegaconf import DictConfig, OmegaConf
 
 from cliport.model_comparison.comparison_utilities import DataHandler, DataProcessor, DataDrawer
+from typing import List
 
-
-ROOT_DIR = "/home/drubuntu/cliport"
+ROOT_DIR = "/home/opendr/mikael/cliport"
 RESULT_FOLDER = f"{ROOT_DIR}/comparison_results"
 DATA_FOLDER = f"{ROOT_DIR}/data"
 EXP_FOLDER = f"{ROOT_DIR}/exps"
 MODELS = [
     "engine-parts-to-box-single-list",
     "engine-parts-single",
-    "packing-objects",
-    "packing-objects",
 ]
 # extenders are required because of requirement to test the same model with
 # multiple training examples. These extenders could be programmatically found as well.
@@ -21,13 +19,11 @@ MODELS = [
 MODEL_EXTENDERS = [
     "-cliport-n88-train",
     "-cliport-n34-train",
-    "-cliport-n108-train",
-    "-cliport-n119-train",
 ]
 MODE = "single"
 TYPE = "common"
 SET = "val"
-# Create placeholder (empty) data for validation goals that have no data (typically due to mispelling)
+# Create placeholder (empty) data for validation goals that have no data (typically due to misspelling)
 USE_BROKEN_GOALS = False
 PLACEHOLDER_VALUE = -1.0
 # Create and use amalgamation dataset for validation (amalgam must be created manually)
@@ -85,7 +81,7 @@ def main() -> int:
             
             episode = data_extractor.get_observation(index, SET)
             (obs, act_actual, _, info) = episode
-            data_drawer.draw_im_data(obs['color'])
+            data_drawer.draw_im_data(obs)
 
         subdict["lang_goals"] = lang_goals
         all_data_dict[f"{MODELS[i]}{MODEL_EXTENDERS[i]}"] = subdict
@@ -231,7 +227,7 @@ def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor,
             ]
 
 
-def save_data(data_extractor: DataHandler, data_processor: DataProcessor, all_data_dict: dict, order: list[str]):
+def save_data(data_extractor: DataHandler, data_processor: DataProcessor, all_data_dict: dict, order: List[str]):
     blurb_text = ""
     for model in all_data_dict:
         csv_text = data_processor.convert_dict_to_csv(all_data_dict[model], order, True)
@@ -248,4 +244,5 @@ def save_data(data_extractor: DataHandler, data_processor: DataProcessor, all_da
 
 if __name__ == "__main__":
     os.environ["CLIPORT_ROOT"] = "/home/drubuntu/cliport/cliport"
+    os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
     main()
