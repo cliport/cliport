@@ -32,11 +32,13 @@ class RigidTransformer:
             [[609.9600830078125, 0.0, 336.7248229980469], [0.0, 609.9955444335938, 249.56271362304688],
              [0.0, 0.0, 1.0]])
 
-        rotation_xyzw = [0.7163862506670556, -0.6969879890334542, -0.029152199866571128, 0.012191482323328342]
-
+        #rotation_xyzw = [0.7163862506670556, -0.6969879890334542, -0.029152199866571128, 0.012191482323328342]
+        rotation_xyzw = [0.691011, -0.00811551, 0.722766, 0.006905]
+        
         rotation_wxyz = [rotation_xyzw[-1], *rotation_xyzw[:-1]]
 
-        translation_xyz = [-0.00172061, 0.34352981, 0.63233277]
+        #translation_xyz = [-0.00172061, 0.34352981, 0.63233277]
+        translation_xyz = [0.0593305, -0.0202352, -0.135014]
 
         tmat, rmat = translation_matrix(translation_xyz), quaternion_matrix(rotation_wxyz)
         self.rigid_transform = np.dot(tmat, rmat)
