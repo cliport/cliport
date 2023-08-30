@@ -66,7 +66,11 @@ class DataHandler:
         self.act = None
 
         # common hydra cfg
-        self.cfg = master_utils.load_hydra_config("cliport/cfg/extraction.yaml")
+        try:
+            self.cfg = master_utils.load_hydra_config("cliport/cfg/extraction.yaml")
+        except FileNotFoundError:
+            # debug file path confusion
+            self.cfg = master_utils.load_hydra_config("cliport/cliport/cfg/extraction.yaml")
 
     def read_dataset(self, model_name: str, target: str) -> None:
         """Reads specified validation / training dataset (RealRobotDataset) to appropriate class memory.
@@ -348,6 +352,22 @@ class DataHandler:
         else:
             return {}, {}
         return episode
+
+    def organize_set(self, set):
+        """de-randomizes the order in a dataset
+
+        Args:
+            set (str): Which set in self to access (either "train" or "val")
+
+        Raises:
+            NotImplementedError: Trying to access a set not understood by the class
+        """
+        if set == "train":
+            self.training_dataset.sample_set = np.sort(self.training_dataset.sample_set)
+        elif set == "val":
+            self.validation_dataset.sample_set = np.sort(self.training_dataset.sample_set)
+        else:
+            raise NotImplementedError("Unknown dataset type.")
 
     def write_csv_to_disk(self, csv_text, filename: str) -> None:
         try:
@@ -704,21 +724,29 @@ class DataDrawer:
     # Utilities for comparing data values
     # TODO: define required functionality
 
-    def __init__(self) -> None:
-        self.fig, self.axs = plt.subplots(
-            nrows=1,
-            ncols=1,
-            squeeze=True,
-            width_ratios=None,
-            height_ratios=None,
-            subplot_kw=None,
-            gridspec_kw=None,
-        )
+    def __init__(self, rows=1, cols=1, wrats=None, hrats=None) -> None:
+        if rows != 1 or cols != 1:
+            self.fig, self.axslist = plt.subplots(
+                nrows=rows,
+                ncols=cols,
+                squeeze=True,
+                width_ratios=wrats,
+                height_ratios=hrats,
+                subplot_kw=None,
+                gridspec_kw=None,
+                constrained_layout=False,
+            )
+            self.axs = self.axslist[0][0]
+        else:
+            self.axs = self.axslist
         self.init = True
         plt.ion()
         self.fig.suptitle("prediction cast pick/place (blue/cyan) vs. actual (red/pink)")
-        self.axs.axes.xaxis.set_visible(False)
-        self.axs.axes.yaxis.set_visible(False)
+        
+        for iy, ix in np.ndindex(self.axslist.shape):
+            axs = self.axslist[iy][ix]
+            axs.axes.xaxis.set_visible(False)
+            axs.axes.yaxis.set_visible(False)
 
         # action values
         self.pick_predict = None
@@ -752,10 +780,7 @@ class DataDrawer:
         self.place_rot_predict = place_rot_pred
         self.place_rot_actual = place_rot_act
 
-    def draw_im_data(self, obs):
-        im_data = obs['color']
-        depth = obs['depth']
-        
+    def draw_im_data(self, im_data):
         self.axs.cla()
         if self.init:
             plt.sca(self.axs)
@@ -780,6 +805,13 @@ class DataDrawer:
         plt.pause(0.02)
         self.fig.canvas.flush_events()
 
+    def draw_data_to_active_axs(self, data):
+        self.axs.cla()
+        self.axs.imshow(data, animated=True)
+        self.fig.canvas.draw()
+        plt.pause(0.02)
+        self.fig.canvas.flush_events()
+
     def draw_grasp_lines(self, position, theta, plot_color):
         line_len = 100
         pick0 = (
@@ -793,3 +825,6 @@ class DataDrawer:
         self.axs.plot(
             (pick1[0], pick0[0]), (pick1[1], pick0[1]), color=plot_color, linewidth=1
         )
+
+    def set_axs(self, r, c):
+        self.axs = self.axslist[r][c]
