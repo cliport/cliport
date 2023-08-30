@@ -81,7 +81,7 @@ def main() -> int:
             
             episode = data_extractor.get_observation(index, SET)
             (obs, act_actual, _, info) = episode
-            data_drawer.draw_im_data(obs)
+            data_drawer.draw_im_data(obs['color'])
 
         subdict["lang_goals"] = lang_goals
         all_data_dict[f"{MODELS[i]}{MODEL_EXTENDERS[i]}"] = subdict
