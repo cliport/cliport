@@ -5,10 +5,12 @@ from omegaconf import DictConfig, OmegaConf
 from cliport.model_comparison.comparison_utilities import DataHandler, DataProcessor, DataDrawer
 from typing import List
 
-ROOT_DIR = "/home/opendr/mikael/cliport"
+ROOT_DIR = "/home/drubuntu/cliport"
+
 RESULT_FOLDER = f"{ROOT_DIR}/comparison_results"
 DATA_FOLDER = f"{ROOT_DIR}/data"
 EXP_FOLDER = f"{ROOT_DIR}/exps"
+CFG_FILE = "train.yaml"
 MODELS = [
     "engine-parts-to-box-single-list",
     "engine-parts-single",
@@ -63,6 +65,7 @@ def main() -> int:
         exp_path=EXP_FOLDER,
         data_path=DATA_FOLDER,
         result_path=RESULT_FOLDER,
+        cfg_filename=CFG_FILE
     )
     data_processor = DataProcessor()
 

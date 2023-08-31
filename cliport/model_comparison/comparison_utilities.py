@@ -16,7 +16,8 @@ from cliport.dataset import RealRobotDataset
 from cliport.utils import utils as master_utils
 from cliport.utils import utils_2 as master_utils_2
 
-from cliport.ros_server import RigidTransformer, get_bbox
+#from cliport.ros_server import RigidTransformer, get_bbox
+from cliport.view_save_data import RigidTransformer
 from typing import List, Tuple, Dict, Any
 
 
@@ -34,7 +35,7 @@ class DataHandler:
     """
 
     def __init__(
-        self, root: str, exp_path: str, data_path: str, result_path: str
+        self, root: str, exp_path: str, data_path: str, result_path: str, cfg_filename: str
     ) -> None:
         """Initialization method for DataHandler. Stores essential path strings & initializes class memory.
 
@@ -49,6 +50,7 @@ class DataHandler:
         self.exp_path = exp_path
         self.data_path = data_path
         self.result_path = result_path
+        self.config_filename = cfg_filename
         self.checkpoint_title = ""
         self.train_count = 0
         self.validation_count = 0
@@ -67,10 +69,10 @@ class DataHandler:
 
         # common hydra cfg
         try:
-            self.cfg = master_utils.load_hydra_config("cliport/cfg/extraction.yaml")
+            self.cfg = master_utils.load_hydra_config(f"cliport/cfg/{cfg_filename}")
         except FileNotFoundError:
             # debug file path confusion
-            self.cfg = master_utils.load_hydra_config("cliport/cliport/cfg/extraction.yaml")
+            self.cfg = master_utils.load_hydra_config(f"cliport/cliport/cfg/{cfg_filename}")
 
     def read_dataset(self, model_name: str, target: str) -> None:
         """Reads specified validation / training dataset (RealRobotDataset) to appropriate class memory.
@@ -737,16 +739,27 @@ class DataDrawer:
                 constrained_layout=False,
             )
             self.axs = self.axslist[0][0]
+                    
+            for iy, ix in np.ndindex(self.axslist.shape):
+                axs = self.axslist[iy][ix]
+                axs.axes.xaxis.set_visible(False)
+                axs.axes.yaxis.set_visible(False)
         else:
-            self.axs = self.axslist
+            self.fig, self.axs = plt.subplots(
+                nrows=rows,
+                ncols=cols,
+                squeeze=True,
+                width_ratios=wrats,
+                height_ratios=hrats,
+                subplot_kw=None,
+                gridspec_kw=None,
+                constrained_layout=False,
+            )
+            self.axs.axes.xaxis.set_visible(False)
+            self.axs.axes.yaxis.set_visible(False)
         self.init = True
         plt.ion()
         self.fig.suptitle("prediction cast pick/place (blue/cyan) vs. actual (red/pink)")
-        
-        for iy, ix in np.ndindex(self.axslist.shape):
-            axs = self.axslist[iy][ix]
-            axs.axes.xaxis.set_visible(False)
-            axs.axes.yaxis.set_visible(False)
 
         # action values
         self.pick_predict = None
