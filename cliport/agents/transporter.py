@@ -38,7 +38,8 @@ class TransporterAgent(LightningModule):
         self.pix_size = 0.003125
         self.in_shape = (256, 160, 6)
         #self.cam_config = cameras.D435Franka.CONFIG
-        self.cam_config = cameras.RealSenseD415.CONFIG
+        #self.cam_config = cameras.RealSenseD415.CONFIG
+        self.cam_config = cameras.D415Franka.CONFIG
         self.bounds = np.array([[0.1, 0.6], [-0.4, 0.4], [-0.05, 0.3]])
 
         self.val_repeats = cfg['train']['val_repeats']

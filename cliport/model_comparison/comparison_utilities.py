@@ -839,5 +839,17 @@ class DataDrawer:
             (pick1[0], pick0[0]), (pick1[1], pick0[1]), color=plot_color, linewidth=1
         )
 
+    @staticmethod
+    def get_grasp_line_pix(position, theta, line_len=20):
+        pos0 = (
+            int(np.round(position[0] + line_len / 2.0 * np.sin(theta))),
+            int(np.round(position[1] + line_len / 2.0 * np.cos(theta))),
+        )
+        pos1 = (
+            int(np.round(position[0] - line_len / 2.0 * np.sin(theta))),
+            int(np.round(position[1] - line_len / 2.0 * np.cos(theta))),
+        )
+        return (pos0, pos1)
+
     def set_axs(self, r, c):
         self.axs = self.axslist[r][c]

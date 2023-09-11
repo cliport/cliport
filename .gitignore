@@ -10,6 +10,7 @@ data/
 exps/
 figures/
 comparison_results/
+caps/
 
 # Large Asserts
 cliport/environments/assets/google/

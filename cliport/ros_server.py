@@ -22,6 +22,8 @@ from cliport import agents
 from cliport.utils import utils
 from cliport.utils import utils_2
 
+from cliport.model_comparison.comparison_utilities import DataDrawer
+
 from transforms3d._gohlketransforms import quaternion_matrix, euler_from_quaternion, translation_matrix
 
 
@@ -32,13 +34,13 @@ class RigidTransformer:
             [[609.9600830078125, 0.0, 336.7248229980469], [0.0, 609.9955444335938, 249.56271362304688],
              [0.0, 0.0, 1.0]])
 
-        #rotation_xyzw = [0.7163862506670556, -0.6969879890334542, -0.029152199866571128, 0.012191482323328342]
-        rotation_xyzw = [0.691011, -0.00811551, 0.722766, 0.006905]
+        rotation_xyzw = [0.7163862506670556, -0.6969879890334542, -0.029152199866571128, 0.012191482323328342]
+        #rotation_xyzw = [0.691011, -0.00811551, -0.029152199866571128, 0.012191482323328342]
         
         rotation_wxyz = [rotation_xyzw[-1], *rotation_xyzw[:-1]]
 
-        #translation_xyz = [-0.00172061, 0.34352981, 0.63233277]
-        translation_xyz = [0.0593305, -0.0202352, -0.135014]
+        translation_xyz = [-0.00172061, 0.34352981, 0.63233277]
+        #translation_xyz = [0.0593305, -0.0202352, -0.135014]
 
         tmat, rmat = translation_matrix(translation_xyz), quaternion_matrix(rotation_wxyz)
         self.rigid_transform = np.dot(tmat, rmat)
@@ -79,7 +81,7 @@ class CameraStream:
 
     def callback_depth(self, data):
         """Depth callback"""
-        self.depth = self.bridge.imgmsg_to_cv2(data, )
+        self.depth = self.bridge.imgmsg_to_cv2(data)
 
     def set_hmap(self, hmap):
         self.hmap = hmap
@@ -104,6 +106,7 @@ class ToolGUI:
         self.hmap_win = "Heightmap capture"
         self.pick_conf_win = "pick task confidence"
         self.place_conf_win = "place task confidence"
+        self.depth_win = "Depth stream"
         self.streamer = streamer
         cv2.namedWindow(self.stream_win)
 
@@ -111,24 +114,39 @@ class ToolGUI:
         """Release resources"""
         cv2.destroyAllWindows()
 
-    def run(self, pick, place) -> None:
+    def run(self, pick, place, pick_theta, place_theta) -> None:
         """Run GUI"""
-        self.handle_stream(pick, place)
+        self.handle_stream(pick, place, pick_theta, place_theta)
         key_press = cv2.waitKey(1) & 0xFF
         if key_press == ord('q'):
             raise KeyboardInterrupt
 
-    def handle_stream(self, pick, place) -> None:
+    def handle_stream(self, pick, place, pick_theta, place_theta) -> None:
         """Display and interact with stream window"""
         if self.streamer.rgb is not None:
             # OpenCV handles bgr format instead of rgb, so we convert first
             bgr = cv2.cvtColor(self.streamer.rgb, cv2.COLOR_RGB2BGR)
             if pick is not None and place is not None:
-                bgr = cv2.circle(bgr, pick, 5, (0, 255, 0), -1)
-                bgr = cv2.circle(bgr, place, 5, (255, 0, 0), -1)
+
+                green = (0, 255, 0)
+                red = (255, 0, 0)
+                pick_line = DataDrawer.get_grasp_line_pix(pick, pick_theta)
+                place_line = DataDrawer.get_grasp_line_pix(place, place_theta)
+                
+                bgr = cv2.circle(bgr, pick, 5, green, -1)
+                bgr = cv2.line(bgr, pick_line[0], pick_line[1], green, 1)
+
+                bgr = cv2.circle(bgr, place, 5, red, -1)
+                bgr = cv2.line(bgr, place_line[0], place_line[1], red, 1)
                 # print('Pixel Coordinates: ', pick, place)
             cv2.namedWindow(self.stream_win, cv2.WINDOW_KEEPRATIO)
             cv2.imshow(self.stream_win, bgr)
+
+        if self.streamer.depth is not None:
+            depth = self.streamer.depth
+            #depth_norm = depth / np.percentile(depth, 25)
+            depth_norm = depth/np.max(depth)
+            cv2.imshow(self.depth_win, depth_norm)
 
         if self.streamer.hmap is not None:
             hmap = self.streamer.hmap
@@ -168,7 +186,8 @@ class CLIPORT:
     def __init__(self):
         """Init agent"""
         agent_type = 'two_stream_clip_lingunet_lat_transporter'
-        model_folder = 'exps/engine-parts-to-box-single-list-cliport-n88-train/checkpoints'
+        model_folder = 'exps/engine-parts-single-cliport-n34-train/checkpoints'
+        #model_folder = 'exps/engine-parts-to-box-single-list-cliport-n88-train/checkpoints'
         ckpt_name = 'best.ckpt'  # name of checkpoint to load
         eval_task = 'packing-objects'
         root_dir = os.environ['CLIPORT_ROOT']
@@ -251,7 +270,7 @@ def main() -> None:
     streamer = CameraStream()
     gui = ToolGUI(streamer)
     try:
-        pick = place = None
+        pick = place = pick_theta = place_theta = None
         cliport.lang = 'put bolt in brown box'
         while not rospy.is_shutdown():
             if streamer.rgb is not None and streamer.depth is not None and cliport.lang is not None:
@@ -278,6 +297,8 @@ def main() -> None:
                 """
                 pick = rt.xyz_to_pix(cliport.act['pose0'][0])  # width,height order of pixels
                 place = rt.xyz_to_pix(cliport.act['pose1'][0])
+                pick_theta = cliport.act['pick'][2]
+                place_theta = cliport.act['place'][2]
                 streamer.set_hmap(cliport.act['hmap'])
                 streamer.set_confidences(cliport.act['pick_confidence'], cliport.act['place_confidence'])
 
@@ -316,7 +337,7 @@ def main() -> None:
                 write_pickle_file(writable_data)
 
                 cliport.lang = None
-            gui.run(pick, place)
+            gui.run(pick, place, pick_theta, place_theta)
     except KeyboardInterrupt:
         rospy.loginfo("Shutting down cliport server")
     gui.cleanup()
@@ -326,5 +347,5 @@ if __name__ == '__main__':
     os.environ["ROS_MASTER_URI"] = "http://172.16.0.10:11311"
     # os.environ["ROS_MASTER_URI"] = "172.16.0.10:42711"
     os.environ["ROS_IP"] = "172.16.0.11"
-
+    os.environ["CLIPORT_ROOT"] = "/home/opendr/mikael/cliport"
     main()
