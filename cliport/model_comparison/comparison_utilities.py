@@ -10,6 +10,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+from matplotlib import pylab
+
 from cliport import agents
 from cliport.dataset import RealRobotDataset
 
@@ -104,14 +106,16 @@ class DataHandler:
         self.validation_dataset = validation_set
         self.validation_count = validation_count
 
-    def extract_target_rot(self, index: int, mode: str, location: str) -> float:
+    def extract_target_rot(self, index: int, mode: str, location: str, size: int=0) -> float:
         """Extracts rotation targets from dataset. Due to the nature of RealRobotDataset, this must be done
         separately from reading the main dataset in :func:`DataExtractor.read_dataset`.
 
         Args:
             index (int): index of data entry to extract rotation target from.
-            mode (str): train or val, indicating which dataset to read from.
+            mode (str): train, val or both, indicating which dataset to read from. Both acts on train data until
+            IndexError and continues from validation data in inverse order.
             location (str): pick or place, indicating from which position data should be extracted.
+            size (int): size of the dataset. Must be set if using mode 'both'
 
         Raises:
             NotImplementedError: Raised when trying to extract from some other position than "pick" or "place".
@@ -128,12 +132,17 @@ class DataHandler:
             # TODO: there can be more positions in multitasks.
             raise NotImplementedError(f"Unknown task position: {location}")
 
-        if mode == "train":
+        if mode == 'both':
+            try:
+                return self.training_dataset[index][0][locator]
+            except IndexError:
+                return self.validation_dataset[index][0][locator]
+        elif mode == "train":
             return self.training_dataset[index][0][locator]
         elif mode == "val":
             return self.validation_dataset[index][0][locator]
         else:
-            raise NotImplementedError(f"Unknown type: {mode} (should be train or val)")
+            raise NotImplementedError(f"Unknown type: {mode} (should be train, val or both)")
 
     def load_model(self, model_name: str, extender: str) -> None:
         """Loads a pytorch model to class storage.
@@ -202,7 +211,7 @@ class DataHandler:
         return self.act
 
     def rot_on_model(
-        self, episode: tuple, mode: str, location: str
+        self, episode: tuple, mode: str, location: str, size=0
     ) -> Tuple[Any, Any, Any]:
         """Commands model to do a rotation prediction. Model must be loaded to memory by
         :func:`DataHandler.load_model` before executing this.
@@ -210,13 +219,14 @@ class DataHandler:
         Args:
             episode (tuple): Action data for datapoint. Contains all relevant data such as image color data,
                 pick & place positions, rotation data, and lang_goal.
-            mode (str): either 'train' or 'val', depending on which dataset should be used in the rotation process.
+            mode (str): 'train', 'val' or 'both', depending on which dataset should be used in the rotation process.
             location (str): either 'pick' or 'place' depending on which position the action is done on.
+            size (int): size of the combined val & train datasets.
 
         Returns:
             tuple(np.ndarray, np.ndarray):
         """
-        batch = self.get_batch(mode, episode)
+        batch = self.get_batch(mode, episode, size)
 
         l = str(batch["lang_goal"])
         inp = {"inp_img": batch["img"], "lang_goal": l}
@@ -323,6 +333,7 @@ class DataHandler:
 
         # note: using self in sub-functions might be bad practice, especially when manipulating outer context.
         def read_pkls(model, extender):
+
             pkls = os.listdir(f"{self.data_path}/{model}-{extender}")
             for pkl in pkls:
                 with open(f"{self.data_path}/{model}-{extender}/{pkl}", "rb") as f:
@@ -337,17 +348,24 @@ class DataHandler:
         read_pkls(model, "val")
         return self.lang_goals
 
-    def get_observation(self, index: int, mode: str) -> Tuple[dict, dict]:
+    def get_observation(self, index: int, mode: str, size: int=0) -> Tuple[dict, dict]:
         """Shell for reading an episode from the specified dataset.
 
         Args:
             index (int): index of the episode in the dataset (same as the number in the filename)
-            mode (str): Either 'train' or 'val' depending on which set is being read.
+            mode (str): 'train', 'val' or 'both' depending on which set is being read. 'both' returns episodes from training set 
+            until index error is reached, then in inverse from validation set (for simplicity).
+            size (int): size of the read dataset. Can be unset except if mode is 'both'
 
         Returns: tuple: Action data for datapoint. Contains all relevant data such as image color data, pick & place
         positions, rotation data, and lang_goal.
         """
-        if mode == "train":
+        if mode == "both":
+            try:
+                episode = self.training_dataset.load(index, True, False)[0][0]
+            except IndexError:
+                episode = self.validation_dataset.load(size - index - 1, True, False)[0][0]
+        elif mode == "train":
             episode = self.training_dataset.load(index, True, False)[0][0]
         elif mode == "val":
             episode = self.validation_dataset.load(index, True, False)[0][0]
@@ -385,10 +403,15 @@ class DataHandler:
         except FileNotFoundError as e:
             print(f"Error: {e}")
 
-    def get_batch(self, mode, episode):
-        if mode == "train":
+    def get_batch(self, mode, episode, size):
+        if mode == 'both':
+            try: 
+                return self.training_dataset.process_sample(episode)
+            except IndexError:
+                return self.validation_dataset.process_sample(episode)
+        elif mode == 'train':
             return self.training_dataset.process_sample(episode)
-        elif mode == "val":
+        elif mode == 'val':
             return self.validation_dataset.process_sample(episode)
         return None
 
@@ -793,27 +816,31 @@ class DataDrawer:
         self.place_rot_predict = place_rot_pred
         self.place_rot_actual = place_rot_act
 
-    def draw_im_data(self, im_data):
+        fig.canvas.set_window_title(title)
+
+    def draw_im_data(self, im_data, use_predicted_data):
         self.axs.cla()
         if self.init:
             plt.sca(self.axs)
         self.axs.imshow(im_data, animated=True)
         self.fig.canvas.draw()
 
-        x_pick_pred, y_pick_pred = self.rigid_transformer.xyz_to_pix(self.pick_predict[0])
-        x_pick_act, y_pick_act = self.rigid_transformer.xyz_to_pix(self.pick_actual[0])
-        x_place_pred, y_place_pred = self.rigid_transformer.xyz_to_pix(self.place_predict[0])
-        x_place_act, y_place_act = self.rigid_transformer.xyz_to_pix(self.place_actual[0])
+        if use_predicted_data:
+            # plot predicted data
+            x_pick_pred, y_pick_pred = self.rigid_transformer.xyz_to_pix(self.pick_predict[0])
+            x_place_pred, y_place_pred = self.rigid_transformer.xyz_to_pix(self.place_predict[0])
+            self.axs.plot(x_pick_pred, y_pick_pred, marker="o", markeredgecolor="red", markerfacecolor="red")
+            self.axs.plot(x_place_pred, y_place_pred, marker="o", markeredgecolor="pink", markerfacecolor="pink")
+            self.draw_grasp_lines([x_pick_pred, y_pick_pred], self.pick_rot_predict, "red")
+            self.draw_grasp_lines([x_place_pred, y_place_pred], self.place_rot_predict, "pink")
 
-        self.axs.plot(x_pick_pred, y_pick_pred, marker="o", markeredgecolor="red", markerfacecolor="red")
-        self.axs.plot(x_pick_act, y_pick_act, marker="o", markeredgecolor="blue", markerfacecolor="blue")
-        self.axs.plot(x_place_pred, y_place_pred, marker="o", markeredgecolor="pink", markerfacecolor="pink")
-        self.axs.plot(x_place_act, y_place_act, marker="o", markeredgecolor="cyan", markerfacecolor="cyan")
-
-        self.draw_grasp_lines([x_pick_pred, y_pick_pred], self.pick_rot_predict, "red")
-        self.draw_grasp_lines([x_pick_act, y_pick_act], self.pick_rot_actual, "blue")
-        self.draw_grasp_lines([x_place_pred, y_place_pred], self.place_rot_predict, "pink")
-        self.draw_grasp_lines([x_place_act, y_place_act], self.place_rot_actual, "cyan")
+            # plot actual data
+            x_pick_act, y_pick_act = self.rigid_transformer.xyz_to_pix(self.pick_actual[0])
+            x_place_act, y_place_act = self.rigid_transformer.xyz_to_pix(self.place_actual[0])
+            self.axs.plot(x_pick_act, y_pick_act, marker="o", markeredgecolor="blue", markerfacecolor="blue")
+            self.axs.plot(x_place_act, y_place_act, marker="o", markeredgecolor="cyan", markerfacecolor="cyan")
+            self.draw_grasp_lines([x_pick_act, y_pick_act], self.pick_rot_actual, "blue")
+            self.draw_grasp_lines([x_place_act, y_place_act], self.place_rot_actual, "cyan")
 
         plt.pause(0.02)
         self.fig.canvas.flush_events()

@@ -13,31 +13,38 @@ EXP_FOLDER = f"{ROOT_DIR}/exps"
 CFG_FILE = "train.yaml"
 MODELS = [
     "engine-parts-to-box-single-list",
-    "engine-parts-single",
+    "engine-parts-to-box-multiple",
+    "packing-objects",
 ]
 # extenders are required because of requirement to test the same model with
 # multiple training examples. These extenders could be programmatically found as well.
 # (mainly because previous project results are compared to current project results / data pollution)
 MODEL_EXTENDERS = [
     "-cliport-n88-train",
-    "-cliport-n34-train",
+    "-cliport-n39-train",
+    "-cliport-n119-train"
 ]
 MODE = "single"
 TYPE = "common"
-SET = "val"
+SET = "both"
 # Create placeholder (empty) data for validation goals that have no data (typically due to misspelling)
 USE_BROKEN_GOALS = False
 PLACEHOLDER_VALUE = -1.0
 # Create and use amalgamation dataset for validation (amalgam must be created manually)
-USE_AMALGAM = True
+USE_AMALGAM = False
 AMALGAM_TITLE = "complete-unseen-amalgamation"
 
+# Write inputs into separate csv files for all models or create a single dump csv
 WRITE_INDIVIDUAL_CSVS = False
 
 # write just box values (5 values) or ALL values
 CALCULATE_BOX_VALUES = True
 USE_ABS_VALUES = True
 
+ASK_USER_VALIDATION = True
+
+# possiblity to skip asking for model to act on the data when this is false (used for dataset inspection)
+DO_PREDICTION = False
 
 def main() -> int:
     """_summary_
@@ -70,21 +77,34 @@ def main() -> int:
     data_processor = DataProcessor()
 
     data_drawer = DataDrawer()
-    
+
     all_data_dict = {}
 
     subdict = {}
     for i in range(len(MODELS)):
         subdict = {}    # empty assignment is necessary or subdict will reference the same variable for all models
-        validation_size, training_size, lang_goals = read_model(data_extractor, i)
-        size = training_size if SET == "train" else validation_size
+        validation_size, training_size, lang_goals = read_model(data_extractor, i, DO_PREDICTION)
+        
+        size = 0
+        if SET == "both":
+            size = training_size + validation_size
+        elif SET == "train":
+            size = training_size
+        elif SET == "val":
+            size = validation_size
 
         for index in range(size):
-            subdict[index] = calculate_values(data_extractor, data_processor, data_drawer, size, index)
-            
-            episode = data_extractor.get_observation(index, SET)
+            if DO_PREDICTION:
+                subdict[index] = calculate_values(data_extractor, data_processor, data_drawer, size, index)
+
+            episode = data_extractor.get_observation(index, SET, size)
             (obs, act_actual, _, info) = episode
-            data_drawer.draw_im_data(obs['color'])
+            data_drawer.draw_im_data(obs['color'], DO_PREDICTION)
+            if ASK_USER_VALIDATION:
+                #TODO: log successes
+                print(info['lang_goal'])
+                input(f'{MODELS[i] + MODEL_EXTENDERS[i]} example {index+1}/{size}')
+            
 
         subdict["lang_goals"] = lang_goals
         all_data_dict[f"{MODELS[i]}{MODEL_EXTENDERS[i]}"] = subdict
@@ -110,7 +130,7 @@ def main() -> int:
     return 0
 
 
-def read_model(data_extractor: DataHandler, index: int):
+def read_model(data_extractor: DataHandler, index: int, load_model=True):
     model = MODELS[index]
     extender = MODEL_EXTENDERS[index]
     print(f"\nReading model: {model} ({index+1}/{len(MODELS)})\n")
@@ -126,17 +146,20 @@ def read_model(data_extractor: DataHandler, index: int):
     lang_goals = data_extractor.get_lang_goals(model)
     
     data_extractor.read_dataset(model, "train")
-    data_extractor.find_latest_best_checkpoint_version(
-        model, extender
-    )
-    data_extractor.augment_cfg(model, extender)
-    data_extractor.load_model(model, extender)
+    
+    if load_model:
+        data_extractor.find_latest_best_checkpoint_version(
+            model, extender
+        )
+        data_extractor.augment_cfg(model, extender)
+        data_extractor.load_model(model, extender)
 
     return validation_size, training_size, lang_goals
 
 
 def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor, data_drawer: DataDrawer, size: int, index: int):
     print(f"Task {index+1}/{size}")
+    
     episode = data_extractor.get_observation(index, SET)
     (obs, act_actual, _, info) = episode
     # goal is pulled from info if not specified
@@ -150,15 +173,15 @@ def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor,
 
     # extract rotational values
     ert = data_extractor.extract_target_rot
-    pick_rot_actual = ert(index, SET, "pick")
-    place_rot_actual = ert(index, SET, "place")
+    pick_rot_actual = ert(index, SET, "pick", size)
+    place_rot_actual = ert(index, SET, "place", size)
 
     rom = data_extractor.rot_on_model
     (
         pick_conf,
         pick_rot_pred_conf,
         pick_logits,
-    ) = rom(episode, SET, "pick")
+    ) = rom(episode, SET, "pick", size)
     place_conf, place_rot_pred_conf, place_logits = rom(episode, SET, "place")
 
     frp = data_processor.find_rot_peak
