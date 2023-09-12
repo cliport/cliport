@@ -11,6 +11,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib import pylab
+from matplotlib.patches import Rectangle
+import matplotlib as mpl
 
 from cliport import agents
 from cliport.dataset import RealRobotDataset
@@ -21,6 +23,8 @@ from cliport.utils import utils_2 as master_utils_2
 #from cliport.ros_server import RigidTransformer, get_bbox
 from cliport.view_save_data import RigidTransformer
 from typing import List, Tuple, Dict, Any
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
 
 class DataHandler:
@@ -744,12 +748,61 @@ class DataProcessor:
         argmax = np.argmax(pick_conf)
         argmax = np.unravel_index(argmax, shape=rot_conf.shape)
 
+    @staticmethod
+    def point_inside_polygon(poly_corners, real_point):
+        point = Point(real_point)
+        polygon = Polygon(poly_corners)
+        
+        return polygon.contains(point)
+
+    @staticmethod
+    def get_angled_rectangle_corners_from_centerpoint(x, y, w, h, theta):
+        """this function was made by ChatGPT
+
+        Args:
+            x (float): x coordinate of rectangle middlepoint
+            y (float): y coordinate of rectangle middlepoint
+            w (float): width of rectangle (x dir)
+            h (float): height of rectangle (y dir)
+            theta (float): angle of rectangle
+
+        Returns:
+            List: list of coordinate tuples for the rotated rectangle corners
+        """
+        half_w = w/2
+        half_h = w/2
+        
+        corners = [
+            (-half_w, -half_h),
+            (-half_w, half_h),
+            (half_w, half_h),
+            (half_w, -half_h)
+        ]
+        
+        # translate rotated corners to actual coordinates
+        rotated_corners = []
+        for corner in corners:
+            x_corner, y_corner = corner
+            x_rotated = x_corner * np.cos(theta) - y_corner * np.sin(theta)
+            y_rotated = x_corner * np.sin(theta) + y_corner * np.cos(theta)
+            rotated_corners.append((x_rotated, y_rotated))
+            
+        return [(x + xr, y + yr) for xr, yr in rotated_corners]
 
 class DataDrawer:
     # Utilities for comparing data values
     # TODO: define required functionality
 
-    def __init__(self, rows=1, cols=1, wrats=None, hrats=None) -> None:
+    def __init__(
+            self, 
+            admission_pick_rectangle_width=0, 
+            admission_pick_rectangle_height=0,
+            admission_place_rectangle_dimension=0,
+            rows=1, 
+            cols=1, 
+            wrats=None, 
+            hrats=None
+        ) -> None:
         if rows != 1 or cols != 1:
             self.fig, self.axslist = plt.subplots(
                 nrows=rows,
@@ -793,6 +846,10 @@ class DataDrawer:
         self.pick_rot_actual = None
         self.place_rot_actual = None
         self.place_rot_predict = None
+        
+        self.admission_pick_rectangle_width = admission_pick_rectangle_width
+        self.admission_pick_rectangle_height = admission_pick_rectangle_height
+        self.admission_place_rectangle_dimension = admission_place_rectangle_dimension
 
         self.rigid_transformer = RigidTransformer()
 
@@ -806,6 +863,7 @@ class DataDrawer:
         pick_rot_act,
         place_rot_pred,
         place_rot_act,
+        title
     ):
         self.pick_predict = pick_pred
         self.pick_actual = pick_act
@@ -816,34 +874,123 @@ class DataDrawer:
         self.place_rot_predict = place_rot_pred
         self.place_rot_actual = place_rot_act
 
-        fig.canvas.set_window_title(title)
+        self.fig.canvas.manager.set_window_title(title)
 
-    def draw_im_data(self, im_data, use_predicted_data):
+    def get_cast_admission_rectangle_values(self, x_pick_pred, y_pick_pred, x_place_pred, y_place_pred):
+        cast_pick_width_px = self.rigid_transformer.xyz_to_pix(
+        [
+            self.pick_predict[0][0] + self.admission_pick_rectangle_width, 
+            self.pick_predict[0][1], 
+            self.pick_predict[0][2]
+        ]
+        )
+        cast_pick_heigth_px = self.rigid_transformer.xyz_to_pix(
+        [
+            self.pick_predict[0][0], 
+            self.pick_predict[0][1] + self.admission_pick_rectangle_height, 
+            self.pick_predict[0][2]
+        ]
+        )
+        cast_place_dim_px = self.rigid_transformer.xyz_to_pix(
+        [
+            self.place_predict[0][0] + self.admission_place_rectangle_dimension,
+            self.place_predict[0][1] + self.admission_place_rectangle_dimension,
+            self.place_predict[0][2]
+        ]
+        )
+        xdpiw = x_pick_pred - cast_pick_width_px[0]
+        ydpiw = y_pick_pred - cast_pick_width_px[1]
+        xdpih = x_pick_pred - cast_pick_heigth_px[0]
+        ydpih = y_pick_pred - cast_pick_heigth_px[1]
+        xdplw = x_place_pred - cast_place_dim_px[0]
+        ydplh = y_place_pred - cast_place_dim_px[1]
+        pick_adm_rect_width_cast = math.sqrt(math.pow(xdpiw, 2) + math.pow(ydpiw, 2))
+        pick_adm_rect_height_cast = math.sqrt(math.pow(xdpih, 2) + math.pow(ydpih, 2))
+        place_adm_rect_dim_cast = math.sqrt(math.pow(xdplw, 2) + math.pow(ydplh, 2))
+        
+        return pick_adm_rect_width_cast, pick_adm_rect_height_cast, place_adm_rect_dim_cast
+
+    def add_admission_rectangles(self, x_pick_pred, y_pick_pred, x_place_pred, y_place_pred):
+        # pick admission rectangle
+        (
+            pick_adm_rect_width_cast, 
+            pick_adm_rect_height_cast, 
+            place_adm_rect_dim_cast 
+        ) = self.get_cast_admission_rectangle_values(
+            x_pick_pred, y_pick_pred, x_place_pred, y_place_pred 
+        )
+        pick_adm_rect = Rectangle(
+                (
+                    x_pick_pred - pick_adm_rect_width_cast/2, 
+                    y_pick_pred - pick_adm_rect_height_cast/2
+                ), 
+                pick_adm_rect_width_cast,
+                pick_adm_rect_height_cast,
+                0,
+                edgecolor = 'red',
+                facecolor = 'none',
+                lw = 2,
+                zorder = 2,
+                )
+        place_adm_rect = Rectangle(
+                (
+                    x_place_pred - place_adm_rect_dim_cast/2, 
+                    y_place_pred - place_adm_rect_dim_cast/2
+                ), 
+                place_adm_rect_dim_cast,
+                place_adm_rect_dim_cast,
+                0,
+                edgecolor = 'pink',
+                facecolor = 'none',
+                lw = 2,
+                zorder = 2,
+                )
+        
+        # apply rotation
+        pick_rot_transform = mpl.transforms.Affine2D().rotate_around(
+            x_pick_pred, y_pick_pred, self.pick_rot_predict) + self.axs.transData
+        place_rot_transform = mpl.transforms.Affine2D().rotate_around(
+            x_place_pred, y_place_pred, self.place_rot_predict) + self.axs.transData
+        
+        pick_adm_rect.set_transform(pick_rot_transform)
+        place_adm_rect.set_transform(place_rot_transform)
+        
+        self.axs.add_patch(pick_adm_rect)
+        self.axs.add_patch(place_adm_rect)
+
+    def draw_im_data(self, im_data, use_predicted_data, draw_admission_rectangles):
         self.axs.cla()
         if self.init:
             plt.sca(self.axs)
         self.axs.imshow(im_data, animated=True)
-        self.fig.canvas.draw()
 
         if use_predicted_data:
-            # plot predicted data
-            x_pick_pred, y_pick_pred = self.rigid_transformer.xyz_to_pix(self.pick_predict[0])
-            x_place_pred, y_place_pred = self.rigid_transformer.xyz_to_pix(self.place_predict[0])
-            self.axs.plot(x_pick_pred, y_pick_pred, marker="o", markeredgecolor="red", markerfacecolor="red")
-            self.axs.plot(x_place_pred, y_place_pred, marker="o", markeredgecolor="pink", markerfacecolor="pink")
-            self.draw_grasp_lines([x_pick_pred, y_pick_pred], self.pick_rot_predict, "red")
-            self.draw_grasp_lines([x_place_pred, y_place_pred], self.place_rot_predict, "pink")
-
-            # plot actual data
-            x_pick_act, y_pick_act = self.rigid_transformer.xyz_to_pix(self.pick_actual[0])
-            x_place_act, y_place_act = self.rigid_transformer.xyz_to_pix(self.place_actual[0])
-            self.axs.plot(x_pick_act, y_pick_act, marker="o", markeredgecolor="blue", markerfacecolor="blue")
-            self.axs.plot(x_place_act, y_place_act, marker="o", markeredgecolor="cyan", markerfacecolor="cyan")
-            self.draw_grasp_lines([x_pick_act, y_pick_act], self.pick_rot_actual, "blue")
-            self.draw_grasp_lines([x_place_act, y_place_act], self.place_rot_actual, "cyan")
+            self.draw_predicted_data(draw_admission_rectangles)
+        
+        self.fig.canvas.draw()
 
         plt.pause(0.02)
         self.fig.canvas.flush_events()
+
+    def draw_predicted_data(self, draw_admission_rectangles):
+        # plot predicted data
+        x_pick_pred, y_pick_pred = self.rigid_transformer.xyz_to_pix(self.pick_predict[0])
+        x_place_pred, y_place_pred = self.rigid_transformer.xyz_to_pix(self.place_predict[0])
+        self.axs.plot(x_pick_pred, y_pick_pred, marker="o", markeredgecolor="red", markerfacecolor="red")
+        self.axs.plot(x_place_pred, y_place_pred, marker="o", markeredgecolor="pink", markerfacecolor="pink")
+        self.draw_grasp_lines([x_pick_pred, y_pick_pred], self.pick_rot_predict, "red")
+        self.draw_grasp_lines([x_place_pred, y_place_pred], self.place_rot_predict, "pink")
+
+        # plot actual data
+        x_pick_act, y_pick_act = self.rigid_transformer.xyz_to_pix(self.pick_actual[0])
+        x_place_act, y_place_act = self.rigid_transformer.xyz_to_pix(self.place_actual[0])
+        self.axs.plot(x_pick_act, y_pick_act, marker="o", markeredgecolor="blue", markerfacecolor="blue")
+        self.axs.plot(x_place_act, y_place_act, marker="o", markeredgecolor="cyan", markerfacecolor="cyan")
+        self.draw_grasp_lines([x_pick_act, y_pick_act], self.pick_rot_actual, "blue")
+        self.draw_grasp_lines([x_place_act, y_place_act], self.place_rot_actual, "cyan")
+
+        if draw_admission_rectangles:
+            self.add_admission_rectangles(x_pick_pred, y_pick_pred, x_place_pred, y_place_pred)
 
     def draw_data_to_active_axs(self, data):
         self.axs.cla()

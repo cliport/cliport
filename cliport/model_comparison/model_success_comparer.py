@@ -31,7 +31,7 @@ SET = "both"
 USE_BROKEN_GOALS = False
 PLACEHOLDER_VALUE = -1.0
 # Create and use amalgamation dataset for validation (amalgam must be created manually)
-USE_AMALGAM = False
+USE_AMALGAM = True
 AMALGAM_TITLE = "complete-unseen-amalgamation"
 
 # Write inputs into separate csv files for all models or create a single dump csv
@@ -44,7 +44,14 @@ USE_ABS_VALUES = True
 ASK_USER_VALIDATION = True
 
 # possiblity to skip asking for model to act on the data when this is false (used for dataset inspection)
-DO_PREDICTION = False
+DO_PREDICTION = True
+
+# calculate success mathematically (not accurate for multiple same objects)
+DO_EVAL_SUCCESS_MATH = True
+ADMITTED_PICK_WIDTH = 0.081
+ADMITTED_PICK_HEIGHT = 0.15
+ADMITTED_PLACE_DIM = 0.1
+
 
 def main() -> int:
     """_summary_
@@ -76,7 +83,13 @@ def main() -> int:
     )
     data_processor = DataProcessor()
 
-    data_drawer = DataDrawer()
+    data_drawer = DataDrawer(
+        admission_pick_rectangle_width=ADMITTED_PICK_WIDTH, 
+        admission_pick_rectangle_height=ADMITTED_PICK_HEIGHT,
+        admission_place_rectangle_dimension=ADMITTED_PLACE_DIM,
+        rows=1,
+        cols=1,
+        )
 
     all_data_dict = {}
 
@@ -92,6 +105,9 @@ def main() -> int:
             size = training_size
         elif SET == "val":
             size = validation_size
+            
+        user_pick_validation_data = []
+        user_place_validation_data = []
 
         for index in range(size):
             if DO_PREDICTION:
@@ -99,17 +115,49 @@ def main() -> int:
 
             episode = data_extractor.get_observation(index, SET, size)
             (obs, act_actual, _, info) = episode
-            data_drawer.draw_im_data(obs['color'], DO_PREDICTION)
-            if ASK_USER_VALIDATION:
-                #TODO: log successes
-                print(info['lang_goal'])
-                input(f'{MODELS[i] + MODEL_EXTENDERS[i]} example {index+1}/{size}')
-            
+            data_drawer.draw_im_data(obs['color'], DO_PREDICTION, DO_EVAL_SUCCESS_MATH)
 
+            if DO_EVAL_SUCCESS_MATH:
+                # pulling class parameters like this is a bad practice
+                pick_rect_corners = data_processor.get_angled_rectangle_corners_from_centerpoint(
+                    data_drawer.pick_predict[0][0],
+                    data_drawer.pick_predict[0][1],
+                    ADMITTED_PICK_WIDTH,
+                    ADMITTED_PICK_HEIGHT,
+                    data_drawer.pick_rot_predict,
+                )
+                math_pick_success = data_processor.point_inside_polygon(pick_rect_corners, data_drawer.pick_actual[0][0:2])
+                
+                place_rect_corners = data_processor.get_angled_rectangle_corners_from_centerpoint(
+                    data_drawer.place_predict[0][0],
+                    data_drawer.place_predict[0][1],
+                    ADMITTED_PICK_WIDTH,
+                    ADMITTED_PICK_HEIGHT,
+                    data_drawer.place_rot_predict,
+                )
+                math_place_success = data_processor.point_inside_polygon(place_rect_corners, data_drawer.place_actual[0][0:2])
+
+            if ASK_USER_VALIDATION:
+                print(info['lang_goal'])
+                commonprompt = f'{MODELS[i] + MODEL_EXTENDERS[i]} example {index+1}/{size}'
+                user_pick_validation_data.append(input(f'{commonprompt}, pick successful? (y/n)'))
+                user_place_validation_data.append(input(f'{commonprompt}, place successful? (y/n)'))
+        # collect set lang_goals
         subdict["lang_goals"] = lang_goals
+        
+        # success validation
+        if ASK_USER_VALIDATION:
+            subdict["user_pick_validation"] = user_pick_validation_data
+            subdict["user_place_validation"] = user_place_validation_data
+            
+        if DO_EVAL_SUCCESS_MATH:
+            subdict["math_pick_success"] = math_pick_success
+            subdict["math_place_success"] = math_place_success
+        
+        # stash model data to all data
         all_data_dict[f"{MODELS[i]}{MODEL_EXTENDERS[i]}"] = subdict
 
-        # clear models & agent from memory
+        # clear models & agent from memory (for loading new agent)
         data_extractor.clear_model_data()
 
     if CALCULATE_BOX_VALUES:
@@ -197,7 +245,8 @@ def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor,
         pick_rot_prediction, 
         pick_rot_actual, 
         place_rot_prediction, 
-        place_rot_actual
+        place_rot_actual,
+        info['lang_goal']
         )
 
     # calculate errors
