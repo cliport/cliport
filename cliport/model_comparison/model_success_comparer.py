@@ -22,7 +22,7 @@ MODELS = [
 MODEL_EXTENDERS = [
     "-cliport-n88-train",
     "-cliport-n39-train",
-    -cliport-n119-train"
+    "-cliport-n119-train"
 ]
 ALIASES = [
     {
