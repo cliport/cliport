@@ -13,7 +13,7 @@ EXP_FOLDER = f"{ROOT_DIR}/exps"
 CFG_FILE = "train.yaml"
 MODELS = [
     "engine-parts-to-box-single-list",
-    "engine-parts-to-box-multiple",
+    "engine-parts-multi",
     "packing-objects",
 ]
 # extenders are required because of requirement to test the same model with
@@ -22,11 +22,38 @@ MODELS = [
 MODEL_EXTENDERS = [
     "-cliport-n88-train",
     "-cliport-n39-train",
-    "-cliport-n119-train"
+    -cliport-n119-train"
 ]
+ALIASES = [
+    {
+        'xput rocker arm in red box': 'put rocker arm in red box',
+        "'put push rod in brown box": 'put push rod in brown box',
+        '12hput rocker arm in brown box': 'put rocker arm in brown box',
+        'put long screw in brown box': 'put bolt in brown box',
+        'put long screw in red box': 'put bolt in red box',
+    },
+    {
+        'put bolt in brown box': 'put all long screws in brown box',
+        'put bolt in red box': 'put all long screws in red box',
+        'put push rod in red box': 'put all push rods in red box',
+        'put push rod in brown box': 'put all push rods in brown box',
+        'hput all long screws in brown box': 'put all long screws in brown box',
+    },
+    {
+        'put bolt in brown box': 'put long screw in brown box',
+        'hhput long screw in brown box': 'put long screw in brown box',
+        'xput long screw in brown box': 'put long screw in brown box',
+        'hput long screw in brown box': 'put long screw in brown box'
+    }
+]
+# Unused
 MODE = "single"
+# Unused
 TYPE = "common"
-SET = "both"
+
+# Set can be "train", "val" or "both" depending on which sets are wanted. 
+# Note that "both" must have both "train" and "val" sets present.
+SET = "val"
 # Create placeholder (empty) data for validation goals that have no data (typically due to misspelling)
 USE_BROKEN_GOALS = False
 PLACEHOLDER_VALUE = -1.0
@@ -52,10 +79,19 @@ ADMITTED_PICK_WIDTH = 0.081
 ADMITTED_PICK_HEIGHT = 0.15
 ADMITTED_PLACE_DIM = 0.1
 
+# Add box labels to CSV (median, quartiles)
+DO_BOX_LABELS = True
+
+# list of error keys that should be averaged instead of box valued (median, useful for bools)
+ERRORS_TO_AVERAGE  = [
+    'math_pick_success', 
+    'math_place_success', 
+    'user_pick_validation', 
+    'user_place_validation',
+    ]
 
 def main() -> int:
-    """_summary_
-      main program loop
+    """main program loop
 
     Args:
 
@@ -97,7 +133,7 @@ def main() -> int:
     for i in range(len(MODELS)):
         subdict = {}    # empty assignment is necessary or subdict will reference the same variable for all models
         validation_size, training_size, lang_goals = read_model(data_extractor, i, DO_PREDICTION)
-        
+
         size = 0
         if SET == "both":
             size = training_size + validation_size
@@ -105,13 +141,16 @@ def main() -> int:
             size = training_size
         elif SET == "val":
             size = validation_size
-            
+
         user_pick_validation_data = []
         user_place_validation_data = []
+        math_pick_success = []
+        math_place_success = []
 
         for index in range(size):
+            model_aliases = ALIASES[i]
             if DO_PREDICTION:
-                subdict[index] = calculate_values(data_extractor, data_processor, data_drawer, size, index)
+                subdict[index] = calculate_values(data_extractor, data_processor, data_drawer, size, index, model_aliases)
 
             episode = data_extractor.get_observation(index, SET, size)
             (obs, act_actual, _, info) = episode
@@ -126,8 +165,10 @@ def main() -> int:
                     ADMITTED_PICK_HEIGHT,
                     data_drawer.pick_rot_predict,
                 )
-                math_pick_success = data_processor.point_inside_polygon(pick_rect_corners, data_drawer.pick_actual[0][0:2])
-                
+                subdict[index][0]['math_pick_success'] = (data_processor.point_inside_polygon(
+                    pick_rect_corners, data_drawer.pick_actual[0][:2]
+                ))
+
                 place_rect_corners = data_processor.get_angled_rectangle_corners_from_centerpoint(
                     data_drawer.place_predict[0][0],
                     data_drawer.place_predict[0][1],
@@ -135,25 +176,33 @@ def main() -> int:
                     ADMITTED_PICK_HEIGHT,
                     data_drawer.place_rot_predict,
                 )
-                math_place_success = data_processor.point_inside_polygon(place_rect_corners, data_drawer.place_actual[0][0:2])
+                subdict[index][0]['math_place_success'] = (data_processor.point_inside_polygon(
+                    place_rect_corners, data_drawer.place_actual[0][:2]
+                ))
 
             if ASK_USER_VALIDATION:
                 print(info['lang_goal'])
                 commonprompt = f'{MODELS[i] + MODEL_EXTENDERS[i]} example {index+1}/{size}'
-                user_pick_validation_data.append(input(f'{commonprompt}, pick successful? (y/n)'))
-                user_place_validation_data.append(input(f'{commonprompt}, place successful? (y/n)'))
+                subdict[index][0]['user_pick_validation'] = (input(f'{commonprompt}, pick successful? (y/n)'.lower()) == 'y')
+                subdict[index][0]['user_place_validation'] = (input(f'{commonprompt}, place successful? (y/n)'.lower()) == 'y')
+                
+        
+        if DO_EVAL_SUCCESS_MATH:
+            subdict['math_pick_success'] = math_pick_success
+            subdict['math_place_success'] =  math_place_success
+            
         # collect set lang_goals
         subdict["lang_goals"] = lang_goals
-        
+
         # success validation
         if ASK_USER_VALIDATION:
             subdict["user_pick_validation"] = user_pick_validation_data
             subdict["user_place_validation"] = user_place_validation_data
-            
+
         if DO_EVAL_SUCCESS_MATH:
             subdict["math_pick_success"] = math_pick_success
             subdict["math_place_success"] = math_place_success
-        
+
         # stash model data to all data
         all_data_dict[f"{MODELS[i]}{MODEL_EXTENDERS[i]}"] = subdict
 
@@ -163,7 +212,7 @@ def main() -> int:
     if CALCULATE_BOX_VALUES:
         # collapse dict so tasks are not present in multiples but as statistical values
         result_dict, order = data_processor.collapse_results_to_meta_results(
-            all_data_dict, USE_BROKEN_GOALS, PLACEHOLDER_VALUE
+            all_data_dict, USE_BROKEN_GOALS, PLACEHOLDER_VALUE, ERRORS_TO_AVERAGE
         )
     else:
         result_dict, order = data_processor.collapse_results_to_results(
@@ -205,11 +254,16 @@ def read_model(data_extractor: DataHandler, index: int, load_model=True):
     return validation_size, training_size, lang_goals
 
 
-def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor, data_drawer: DataDrawer, size: int, index: int):
+def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor, data_drawer: DataDrawer, size: int, index: int, model_aliases: dict):
     print(f"Task {index+1}/{size}")
-    
+
     episode = data_extractor.get_observation(index, SET)
+
     (obs, act_actual, _, info) = episode
+    # replace newer lang goal with alias (old models had different names for objects)
+    if info['lang_goal'] in model_aliases:
+        info['lang_goal'] = model_aliases[info['lang_goal']]
+
     # goal is pulled from info if not specified
     act_prediction = data_extractor.act_on_model(obs, info, goal=None)
 
@@ -230,7 +284,11 @@ def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor,
         pick_rot_pred_conf,
         pick_logits,
     ) = rom(episode, SET, "pick", size)
-    place_conf, place_rot_pred_conf, place_logits = rom(episode, SET, "place")
+    (
+        place_conf, 
+        place_rot_pred_conf, 
+        place_logits
+    ) = rom(episode, SET, "place")
 
     frp = data_processor.find_rot_peak
     pick_rot_prediction = frp(pick_rot_pred_conf)
@@ -266,23 +324,23 @@ def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor,
 
     if USE_ABS_VALUES:
         return [
-                {
-                    "pick_x_error": abs(pick_dist_err_collection[0]),
-                    "pick_y_error": abs(pick_dist_err_collection[1]),
-                    "pick_z_error": abs(pick_dist_err_collection[2]),
-                    "total_pick_error": abs(pick_dist_err_collection[3]),
-                    "place_x_error": abs(place_dist_err_collection[0]),
-                    "place_y_error": abs(place_dist_err_collection[1]),
-                    "place_z_error": abs(place_dist_err_collection[2]),
-                    "total_place_error": abs(place_dist_err_collection[3]),
-                    "pick_rotation_error": abs(pick_rot_err),
-                    "place_rotation_error": abs(place_rot_err),
-                    "travel_error": abs(travel_errors[0]),
-                    "actual_travel": abs(travel_errors[1]),
-                    "predicted_travel": abs(travel_errors[2]),
-                },
-                info["lang_goal"],
-            ]
+            {
+                "pick_x_error": abs(pick_dist_err_collection[0]),
+                "pick_y_error": abs(pick_dist_err_collection[1]),
+                "pick_z_error": abs(pick_dist_err_collection[2]),
+                "total_pick_error": abs(pick_dist_err_collection[3]),
+                "place_x_error": abs(place_dist_err_collection[0]),
+                "place_y_error": abs(place_dist_err_collection[1]),
+                "place_z_error": abs(place_dist_err_collection[2]),
+                "total_place_error": abs(place_dist_err_collection[3]),
+                "pick_rotation_error": abs(pick_rot_err),
+                "place_rotation_error": abs(place_rot_err),
+                "travel_error": abs(travel_errors[0]),
+                "actual_travel": abs(travel_errors[1]),
+                "predicted_travel": abs(travel_errors[2]),
+            },
+            info["lang_goal"],
+        ]
     else:
         return [
                 {
@@ -307,7 +365,7 @@ def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor,
 def save_data(data_extractor: DataHandler, data_processor: DataProcessor, all_data_dict: dict, order: List[str]):
     blurb_text = ""
     for model in all_data_dict:
-        csv_text = data_processor.convert_dict_to_csv(all_data_dict[model], order, True)
+        csv_text = data_processor.convert_dict_to_csv(all_data_dict[model], order, ERRORS_TO_AVERAGE, DO_BOX_LABELS)
         if WRITE_INDIVIDUAL_CSVS:
             data_extractor.write_csv_to_disk(csv_text, f"{model}.csv")
         elif blurb_text == "":

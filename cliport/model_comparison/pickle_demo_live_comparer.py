@@ -1,20 +1,22 @@
 import pickle
 import cv2
 import json
-import rospy
+#import rospy
 
 import numpy as np
 
 from cliport.model_comparison.comparison_utilities import DataHandler, DataDrawer
-from cliport.ros_server import RigidTransformer, get_bbox
+#from cliport.ros_server import RigidTransformer, get_bbox
+from transforms3d._gohlketransforms import quaternion_matrix, euler_from_quaternion, translation_matrix
 from cliport.utils import utils_2
-from std_msgs.msg import String
+#from std_msgs.msg import String
 
 
-ROOT_DIR = "/home/opendr/mikael/cliport"
+ROOT_DIR = "/home/drubuntu/cliport"
 RESULT_FOLDER = f"{ROOT_DIR}/comparison_results"
 DATA_FOLDER = f"{ROOT_DIR}/data"
 EXP_FOLDER = f"{ROOT_DIR}/exps"
+CFG_FILE = "train.yaml"
 MODELS = [
     "engine-parts-to-box-single-list",
     "engine-parts-single",
@@ -46,6 +48,35 @@ def get_bbox_thresh(point, offset, shape):
         ]
     ]
 
+class RigidTransformer:
+
+    def __init__(self):
+        self.intrinsic_mat = np.array(
+            [[609.9600830078125, 0.0, 336.7248229980469], [0.0, 609.9955444335938, 249.56271362304688],
+             [0.0, 0.0, 1.0]])
+
+        rotation_xyzw = [0.7163862506670556, -0.6969879890334542, -0.029152199866571128, 0.012191482323328342]
+        #rotation_xyzw = [0.691011, -0.00811551, -0.029152199866571128, 0.012191482323328342]
+        
+        rotation_wxyz = [rotation_xyzw[-1], *rotation_xyzw[:-1]]
+
+        translation_xyz = [-0.00172061, 0.34352981, 0.63233277]
+        #translation_xyz = [0.0593305, -0.0202352, -0.135014]
+
+        tmat, rmat = translation_matrix(translation_xyz), quaternion_matrix(rotation_wxyz)
+        self.rigid_transform = np.dot(tmat, rmat)
+
+    def xyz_to_pix(self, xyz):
+        """Convert world coordinates to pixels"""
+        intrinsic_mat = self.intrinsic_mat
+        world_xyz = np.ones((4, 1))
+        world_xyz[:3, 0] = xyz[:]
+        camera_xyz = np.dot(self.rigid_transform, world_xyz).flatten()[:3] * 1000
+        u = (intrinsic_mat[0][0] * camera_xyz[0]) / camera_xyz[2] + intrinsic_mat[0][2]
+        v = (intrinsic_mat[1][1] * camera_xyz[1]) / camera_xyz[2] + intrinsic_mat[1][2]
+
+        return int(round(u)), int(round(v))
+
 
 def main() -> int:
     data_handler = DataHandler(        
@@ -53,13 +84,14 @@ def main() -> int:
         exp_path=EXP_FOLDER,
         data_path=DATA_FOLDER,
         result_path=RESULT_FOLDER,
+        cfg_filename=CFG_FILE
         )
     data_drawer = DataDrawer(cols=2, rows=2)    
 
     rt = RigidTransformer()
 
-    rospy.init_node("cliport", anonymous=True, log_level=rospy.INFO)
-    pose_pub = rospy.Publisher("/cliport/out", String, queue_size=3)
+    #rospy.init_node("cliport", anonymous=True, log_level=rospy.INFO)
+    #pose_pub = rospy.Publisher("/cliport/out", String, queue_size=3)
 
     for i in range(len(MODELS)):
         training_size = data_handler.get_set_limit(MODELS[i], "train")
@@ -84,10 +116,13 @@ def main() -> int:
 
             pick_real_xyz = act_actual['pose0'][0]
             place_real_xyz = act_actual['pose1'][0]
-            pick_real_rotation = info['pick_data']['rotation']
-            place_real_rotation = info['place_data']['rotation']
+            pick_real_rotation = info['pick_data'][0]['rotation']
+            place_real_rotation = info['place_data'][0]['rotation']
             
             act = data_handler.act_on_model(obs, info, goal=None)
+            hmap = act['hmap']
+            pick_confidence = act['pick_confidence']
+            place_confidence = act['place_confidence']
 
             condition = True
             while condition:
@@ -111,10 +146,10 @@ def main() -> int:
 
                 condition = np.isnan(pick_pred_xyz).any() or np.isnan(place_pred_xyz).any()
 
-                rospy.loginfo(f"pose0:{pick_pred_xyz}")
-                rospy.loginfo(f"pose1:{place_pred_xyz}")
-                if condition:
-                    rospy.loginfo("ACTED AGAIN, BAD LOCATION")
+                #rospy.loginfo(f"pose0:{pick_pred_xyz}")
+                #rospy.loginfo(f"pose1:{place_pred_xyz}")
+                #if condition:
+                #    rospy.loginfo("ACTED AGAIN, BAD LOCATION")
 
             data_dic = {
                 'pick_xyz': pick_pred_xyz, 
@@ -123,14 +158,17 @@ def main() -> int:
                 'place_rotation': place_pred_rotation
                 }
             
-            data_str = json.dumps(data_dic)
-            pose_pub.publish(data_str)
+            #data_str = json.dumps(data_dic)
+            #pose_pub.publish(data_str)
 
             data_drawer.set_axs(0, 0)
             data_drawer.draw_data_to_active_axs(image)
             data_drawer.set_axs(0, 1)
-            data_drawer.draw_data_to_active_axs(depth)
+            data_drawer.draw_data_to_active_axs(hmap)
             data_drawer.set_axs(1, 0)
+            data_drawer.draw_data_to_active_axs(pick_confidence)
+            data_drawer.set_axs(1, 1)
+            data_drawer.draw_data_to_active_axs(place_confidence)
 
             input("Continue?")
 

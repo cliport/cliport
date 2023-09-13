@@ -440,7 +440,8 @@ class DataProcessor:
     Returns:
         (object): Nothing defined
     """
-
+    #TODO: functions in this class are regularly terrible.
+    
     def __init__(self) -> None:
         """Initialization function for DataProcessor. Class contains no memory of state & most functions are
         static methods. Some functions call other class functions."""
@@ -487,7 +488,7 @@ class DataProcessor:
 
     @staticmethod
     def convert_dict_to_csv(
-        dict_to_convert: dict, order: List[str], do_box_labels: bool = False
+        dict_to_convert: dict, order: List[str], special_keys: list, do_box_labels: bool = False, 
     ) -> str:
         task_names = list(dict_to_convert.keys())
         if do_box_labels:
@@ -508,19 +509,28 @@ class DataProcessor:
         row_entries = {}
         for task_name in task_names:
             # extracting data for rows of csv
-            i = 0
-            height, width = np.shape(dict_to_convert[task_name])
-            while i < width:
-                k = 0
+
+            #height, width = np.shape(dict_to_convert[task_name]['box'])
+            height = len(dict_to_convert[task_name]['box'])
+            width = len(order[0])
+            for i in range(width):
                 error_title = order[0][i]
-                while k < height:
-                    error = dict_to_convert[task_name][k][i]
+                if error_title in special_keys:
+                    entry = dict_to_convert[task_name]['average'].pop(0)
                     if error_title not in row_entries:
-                        row_entries[error_title] = [error]
+                        row_entries[error_title] = [entry]
                     else:
-                        row_entries[error_title].append(error)
-                    k += 1
-                i += 1
+                        row_entries[error_title].append(entry)
+                    # placeholder values for proper alignment
+                    for _ in range(height - 1):
+                        row_entries[error_title].append(entry)
+                else:
+                    for k in range(height):
+                        error = dict_to_convert[task_name]['box'][k][i]
+                        if error_title not in row_entries:
+                            row_entries[error_title] = [error]
+                        else:
+                            row_entries[error_title].append(error)
 
         for error_title in list(row_entries.keys()):
             first_entry = True
@@ -538,7 +548,10 @@ class DataProcessor:
         return csv_text
 
     def collapse_results_to_meta_results(
-        self, all_data_dict: dict, use_broken_goals: bool, placeholder_value: float
+        self, all_data_dict: dict, 
+        use_broken_goals: bool, 
+        placeholder_value: float, 
+        errors_to_average: list
     ) -> (dict, list):
         # TODO: finish this
         # seems to not stash all error data.
@@ -563,7 +576,8 @@ class DataProcessor:
         order_stash = []
         for model_name in model_names:
             present_example_lang_goals = self.find_task_lang_goals(
-                all_data_dict[model_name]
+                all_data_dict[model_name],
+                errors_to_average
             )
             for lang_goal in all_lang_goals:
                 skip_flag = False
@@ -589,7 +603,9 @@ class DataProcessor:
                         first_quartile_goal_data,
                         third_quartile_goal_data,
                         box_order,
-                    ) = self.calculate_box_values_of_errors(current_goal_data)
+                        average_goal_data,
+                    ) = self.calculate_box_values_of_errors(current_goal_data, errors_to_average)
+                    # reset value, doesn't seem to reset otherwise
                     boxed_goal_data = []
                     boxed_goal_data = [
                         minimum_goal_data,
@@ -602,14 +618,22 @@ class DataProcessor:
                     order_stash.append(box_order)
 
                     if model_name not in result_dict:
-                        result_dict[model_name] = {lang_goal: boxed_goal_data}
+                        result_dict[model_name] = {lang_goal: {
+                            'box': boxed_goal_data, 
+                            'average': average_goal_data,
+                            }}
                     else:
-                        result_dict[model_name][lang_goal] = boxed_goal_data
+                        result_dict[model_name][lang_goal] = {
+                            'box': boxed_goal_data,
+                            'average': average_goal_data,
+                            }
         return result_dict, order_stash
 
     def collapse_results_to_results(
         self, all_data_dict: dict, placeholder_value: float
     ) -> (dict, list):
+        """A simplified version of :func:`collapse_results_to_meta_results` which doesn't calculate values but uses result values "as is"
+        """
         result_dict = {}
         all_lang_goals = {}
 
@@ -652,10 +676,11 @@ class DataProcessor:
 
     @staticmethod
     def find_same_tasks(data_dict: dict, lang_goal) -> list:
+        string_values = ['lang_goals', 'math_pick_success', 'math_place_success', 'user_pick_validation', 'user_place_validation']
         return [
             data_dict[entry][0]
             for entry in data_dict
-            if str(entry) != "lang_goals" and data_dict[entry][1] == lang_goal
+            if str(entry) not in string_values and data_dict[entry][1] == lang_goal
         ]
 
     @staticmethod
@@ -691,7 +716,7 @@ class DataProcessor:
         return result, order
 
     @staticmethod
-    def calculate_box_values_of_errors(dict_list: List[dict]):
+    def calculate_box_values_of_errors(dict_list: List[dict], special_entries: list):
         error_keys = list(dict_list[0].keys())
         order = []
         minimum = []
@@ -699,21 +724,24 @@ class DataProcessor:
         median = []
         first_quartile = []
         third_quartile = []
-
+        average = []
         # across every model (dict list item), get values with error_key (x_error etc.) & find box values. Since this
         # could be random, create an "order" list as well (current main checks only the first value in
         # convert_dict_to_csv)
         for error_key in error_keys:
+
             order.append(error_key)
             values = [item[error_key] for item in dict_list]
+            if error_key in special_entries:
+                average.append(np.average(values))
+            else:
+                minimum.append(min(values))
+                maximum.append(max(values))
+                median.append(np.median(values))
+                first_quartile.append(np.percentile(values, 25))
+                third_quartile.append(np.percentile(values, 75))
 
-            minimum.append(min(values))
-            maximum.append(max(values))
-            median.append(np.median(values))
-            first_quartile.append(np.percentile(values, 25))
-            third_quartile.append(np.percentile(values, 75))
-
-        return minimum, maximum, median, first_quartile, third_quartile, order
+        return minimum, maximum, median, first_quartile, third_quartile, order, average
 
     @staticmethod
     def append_all_errors(dict_list: List[dict]):
@@ -728,10 +756,11 @@ class DataProcessor:
         return all_data, order
 
     @staticmethod
-    def find_task_lang_goals(data_dict: dict) -> list:
+    def find_task_lang_goals(data_dict: dict, special_entries: list) -> list:
         goal_list = []
+
         for entry in data_dict:
-            if entry != "lang_goals":
+            if entry not in special_entries and entry != "lang_goals":
                 # lang_goals might not have any entries (should be impossible), this should be separate
                 if data_dict[entry][1] not in goal_list:
                     goal_list.append(data_dict[entry][1])
@@ -743,10 +772,6 @@ class DataProcessor:
         argmax = np.unravel_index(argmax, shape=rot_conf.shape)
         return argmax
 
-    @staticmethod
-    def extract_point_from_pred(conf):
-        argmax = np.argmax(pick_conf)
-        argmax = np.unravel_index(argmax, shape=rot_conf.shape)
 
     @staticmethod
     def point_inside_polygon(poly_corners, real_point):
@@ -790,9 +815,8 @@ class DataProcessor:
         return [(x + xr, y + yr) for xr, yr in rotated_corners]
 
 class DataDrawer:
-    # Utilities for comparing data values
-    # TODO: define required functionality
-
+    """Collection of bespoke functions for drawing data. 
+    """
     def __init__(
             self, 
             admission_pick_rectangle_width=0, 
