@@ -9,6 +9,7 @@ import torch
 
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
 
 from matplotlib import pylab
 from matplotlib.patches import Rectangle
@@ -813,6 +814,21 @@ class DataProcessor:
             rotated_corners.append((x_rotated, y_rotated))
             
         return [(x + xr, y + yr) for xr, yr in rotated_corners]
+
+    @staticmethod
+    def augment_confidence_map(im_data):
+        reshape = np.matrix.transpose(np.flip(im_data))[0]
+        aug = reshape / reshape.max()
+        im = np.array(aug * 255, dtype=np.uint8)
+        #im = cv2.normalize(im, im, 0, 255, cv2.NORM_MINMAX)
+        cv2.applyColorMap(im, cv2.COLORMAP_PLASMA)
+        return im
+    
+    @staticmethod
+    def augment_hmap(im_data):
+        norm = im_data / np.max(im_data)
+        norm = np.matrix.transpose(np.flip(norm))
+        return norm
 
 class DataDrawer:
     """Collection of bespoke functions for drawing data. 

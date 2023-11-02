@@ -119,13 +119,22 @@ def main() -> int:
     )
     data_processor = DataProcessor()
 
-    data_drawer = DataDrawer(
-        admission_pick_rectangle_width=ADMITTED_PICK_WIDTH, 
-        admission_pick_rectangle_height=ADMITTED_PICK_HEIGHT,
-        admission_place_rectangle_dimension=ADMITTED_PLACE_DIM,
-        rows=1,
-        cols=1,
-        )
+    if DO_PREDICTION:
+        data_drawer = DataDrawer(
+            admission_pick_rectangle_width=ADMITTED_PICK_WIDTH, 
+            admission_pick_rectangle_height=ADMITTED_PICK_HEIGHT,
+            admission_place_rectangle_dimension=ADMITTED_PLACE_DIM,
+            rows=2,
+            cols=2,
+            )
+    else:
+        data_drawer = DataDrawer(
+            admission_pick_rectangle_width=ADMITTED_PICK_WIDTH, 
+            admission_pick_rectangle_height=ADMITTED_PICK_HEIGHT,
+            admission_place_rectangle_dimension=ADMITTED_PLACE_DIM,
+            rows=1,
+            cols=1,
+            )
 
     all_data_dict = {}
 
@@ -149,12 +158,32 @@ def main() -> int:
 
         for index in range(size):
             model_aliases = ALIASES[i]
-            if DO_PREDICTION:
-                subdict[index] = calculate_values(data_extractor, data_processor, data_drawer, size, index, model_aliases)
-
-            episode = data_extractor.get_observation(index, SET, size)
+            episode = data_extractor.get_observation(index, SET)
             (obs, act_actual, _, info) = episode
+            
+            # replace newer lang goal with alias (old models had different names for objects)
+            if info['lang_goal'] in model_aliases:
+                info['lang_goal'] = model_aliases[info['lang_goal']]
+            
+            if DO_PREDICTION:
+                # goal is pulled from info if not specified
+                act_prediction = data_extractor.act_on_model(obs, info, goal=None)
+                subdict[index] = calculate_values(data_extractor, data_processor, data_drawer, act_prediction, episode, size, index, model_aliases)
+
+            data_drawer.set_axs(0, 0)
             data_drawer.draw_im_data(obs['color'], DO_PREDICTION, DO_EVAL_SUCCESS_MATH)
+            if DO_PREDICTION:
+                hmap = data_processor.augment_hmap(act_prediction['hmap'])
+                pick_im = data_processor.augment_confidence_map(act_prediction['pick_confidence'])
+                place_im = data_processor.augment_confidence_map(act_prediction['place_confidence'])
+                data_drawer.set_axs(0, 1)
+                data_drawer.draw_data_to_active_axs(hmap)
+                data_drawer.set_axs(1, 0)
+                data_drawer.draw_data_to_active_axs(pick_im)
+                data_drawer.set_axs(1, 1)
+                data_drawer.draw_data_to_active_axs(place_im)
+            
+            #data_drawer.draw_im_data(obs['color'], DO_PREDICTION, DO_EVAL_SUCCESS_MATH)
 
             if DO_EVAL_SUCCESS_MATH:
                 # pulling class parameters like this is a bad practice
@@ -254,18 +283,9 @@ def read_model(data_extractor: DataHandler, index: int, load_model=True):
     return validation_size, training_size, lang_goals
 
 
-def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor, data_drawer: DataDrawer, size: int, index: int, model_aliases: dict):
+def calculate_values(data_extractor: DataHandler, data_processor: DataProcessor, data_drawer: DataDrawer, act_prediction, episode, size: int, index: int, model_aliases: dict):
     print(f"Task {index+1}/{size}")
-
-    episode = data_extractor.get_observation(index, SET)
-
     (obs, act_actual, _, info) = episode
-    # replace newer lang goal with alias (old models had different names for objects)
-    if info['lang_goal'] in model_aliases:
-        info['lang_goal'] = model_aliases[info['lang_goal']]
-
-    # goal is pulled from info if not specified
-    act_prediction = data_extractor.act_on_model(obs, info, goal=None)
 
     # extract positional values
     pick_actual = act_actual["pose0"]
