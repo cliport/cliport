@@ -30,7 +30,7 @@ Setup virtualenv and install requirements:
 # setup virtualenv with whichever package manager you prefer
 virtualenv -p $(which python3.8) --system-site-packages cliport_env  
 source cliport_env/bin/activate
-pip install --upgrade pip
+pip install "pip<24.1"
 
 cd cliport
 pip install -r requirements.txt
